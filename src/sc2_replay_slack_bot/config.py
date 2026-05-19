@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ class AppConfig:
     guides_dir: Path
     slack_webhook_url: str
     analyzer_mode: str
+    min_replay_mtime: datetime | None
     llm_api_key: str
     llm_api_base_url: str
     llm_model: str
@@ -31,7 +33,19 @@ def load_config() -> AppConfig:
         guides_dir=guides_dir,
         slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL", ""),
         analyzer_mode=os.getenv("ANALYZER_MODE", "heuristic").strip().lower(),
+        min_replay_mtime=_parse_datetime(os.getenv("MIN_REPLAY_MTIME", "").strip()),
         llm_api_key=os.getenv("LLM_API_KEY", os.getenv("OPENAI_API_KEY", "")),
         llm_api_base_url=os.getenv("LLM_API_BASE_URL", os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")),
         llm_model=os.getenv("LLM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini")),
     )
+
+
+def _parse_datetime(value: str) -> datetime | None:
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    raise ValueError(f"Unsupported MIN_REPLAY_MTIME format: {value}")

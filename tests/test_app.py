@@ -37,6 +37,7 @@ def test_run_once_dry_run_processes_new_replay(tmp_path: Path, monkeypatch) -> N
         guides_dir=guides_dir,
         slack_webhook_url="",
         analyzer_mode="heuristic",
+        min_replay_mtime=None,
         llm_api_key="",
         llm_api_base_url="https://api.openai.com/v1",
         llm_model="gpt-4.1-mini",
@@ -56,6 +57,11 @@ def test_run_once_dry_run_processes_new_replay(tmp_path: Path, monkeypatch) -> N
                 FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
                 FakeTeam(2, "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
             ],
+            players=[
+                FakePlayer("Alpha", "Protoss", "Protoss", 200),
+                FakePlayer("Bravo", "Terran", "Terran", 180),
+            ],
+            tracker_events=[],
         ),
     )
 
@@ -64,3 +70,56 @@ def test_run_once_dry_run_processes_new_replay(tmp_path: Path, monkeypatch) -> N
     assert len(results) == 1
     assert results[0]["facts"]["matchup"] == "PvT"
     assert "sample.SC2Replay" in results[0]["slack_text"]
+
+
+def test_run_once_skips_unreadable_replay_and_continues(tmp_path: Path, monkeypatch) -> None:
+    replay_dir = tmp_path / "replays"
+    replay_dir.mkdir()
+    bad_replay = replay_dir / "bad.SC2Replay"
+    good_replay = replay_dir / "good.SC2Replay"
+    bad_replay.write_bytes(b"bad")
+    good_replay.write_bytes(b"good")
+
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    config = AppConfig(
+        replay_dir=replay_dir,
+        state_path=tmp_path / "state.json",
+        guides_dir=guides_dir,
+        slack_webhook_url="",
+        analyzer_mode="heuristic",
+        min_replay_mtime=None,
+        llm_api_key="",
+        llm_api_base_url="https://api.openai.com/v1",
+        llm_model="gpt-4.1-mini",
+    )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.load_config", lambda: config)
+
+    def fake_load_replay(path: str, **_kwargs):
+        if path.endswith('bad.SC2Replay'):
+            raise OSError('Resource deadlock avoided')
+        return SimpleNamespace(
+            map_name="Post-Youth",
+            game_length=SimpleNamespace(seconds=600),
+            date="2026-05-19",
+            real_type="1v1",
+            category="Ladder",
+            expansion="LotV",
+            teams=[
+                FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
+                FakeTeam(2, "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
+            ],
+            players=[
+                FakePlayer("Alpha", "Protoss", "Protoss", 200),
+                FakePlayer("Bravo", "Terran", "Terran", 180),
+            ],
+            tracker_events=[],
+        )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.sc2reader.load_replay", fake_load_replay)
+
+    results = run_once(dry_run=True, max_files=10)
+
+    assert len(results) == 1
+    assert results[0]["replay"] == "good.SC2Replay"

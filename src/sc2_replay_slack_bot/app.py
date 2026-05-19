@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 
 import sc2reader
 
@@ -14,6 +15,8 @@ from .parser import replay_to_facts
 from .prompting import build_analysis_prompt
 from .replay_store import ReplayStore
 from .slack import build_slack_text, post_to_slack
+
+logger = logging.getLogger(__name__)
 
 
 def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
@@ -28,39 +31,47 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
     )
 
     processed: list[dict] = []
-    for replay_path in find_replay_files(config.replay_dir)[:max_files]:
-        status = store.classify(replay_path)
+    for replay_path in find_replay_files(config.replay_dir, min_mtime=config.min_replay_mtime)[:max_files]:
+        try:
+            status = store.classify(replay_path)
+        except OSError as exc:
+            logger.warning("Skipping unreadable replay during hashing %s: %s", replay_path, exc)
+            continue
         if not status.is_new:
             continue
 
-        replay = sc2reader.load_replay(str(replay_path), load_level=4)
-        facts = replay_to_facts(replay)
-        facts["replay_path"] = str(replay_path)
-        facts["sha256"] = status.sha256
-        facts["summary_metrics"] = extract_summary_metrics(replay)
+        try:
+            replay = sc2reader.load_replay(str(replay_path), load_level=4)
+            facts = replay_to_facts(replay)
+            facts["replay_path"] = str(replay_path)
+            facts["sha256"] = status.sha256
+            facts["summary_metrics"] = extract_summary_metrics(replay)
 
-        if config.analyzer_mode == "openai":
-            prompt = build_analysis_prompt(facts, guide_context=guide_context)
-            analysis = llm.analyze(prompt)
-        else:
-            analysis = build_manual_analysis(facts, guide_context=guide_context)
+            if config.analyzer_mode == "openai":
+                prompt = build_analysis_prompt(facts, guide_context=guide_context)
+                analysis = llm.analyze(prompt)
+            else:
+                analysis = build_manual_analysis(facts, guide_context=guide_context)
 
-        slack_text = build_slack_text(facts, analysis, replay_name=replay_path.name)
+            slack_text = build_slack_text(facts, analysis, replay_name=replay_path.name)
 
-        if not dry_run:
-            if not config.slack_webhook_url:
-                raise ValueError("SLACK_WEBHOOK_URL is required unless --dry-run is used")
-            post_to_slack(config.slack_webhook_url, slack_text)
+            if not dry_run:
+                if not config.slack_webhook_url:
+                    raise ValueError("SLACK_WEBHOOK_URL is required unless --dry-run is used")
+                post_to_slack(config.slack_webhook_url, slack_text)
 
-        processed.append(
-            {
-                "replay": replay_path.name,
-                "status": status.reason,
-                "facts": facts,
-                "analysis": analysis,
-                "slack_text": slack_text,
-            }
-        )
+            processed.append(
+                {
+                    "replay": replay_path.name,
+                    "status": status.reason,
+                    "facts": facts,
+                    "analysis": analysis,
+                    "slack_text": slack_text,
+                }
+            )
+        except OSError as exc:
+            logger.warning("Skipping unreadable replay %s: %s", replay_path, exc)
+            continue
     return processed
 
 

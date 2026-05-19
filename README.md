@@ -60,6 +60,8 @@ STATE_PATH=/Users/osori/workbench/sc2-replay-slack-bot/state/processed_replays.j
 GUIDES_DIR=/Users/osori/workbench/sc2-replay-slack-bot/docs/guides
 SLACK_WEBHOOK_URL=...실제 webhook...
 ANALYZER_MODE=heuristic
+# Optional: only process replays modified on/after this time
+MIN_REPLAY_MTIME='2026-05-18 00:00:00'
 # ANALYZER_MODE=openai 로 바꿀 때만 아래 3개 필요
 LLM_API_KEY=...실제 API 키...
 LLM_MODEL=gpt-4.1-mini
