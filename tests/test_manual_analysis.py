@@ -65,3 +65,7 @@ def test_manual_analysis_returns_grounded_korean_sections() -> None:
     assert "일꾼 수" in text
     assert "10:00-11:00" in text
     assert "프테전" in text
+    assert "가장 큰 차이는 교환 효율" not in text
+    assert "체제" in text or "빌드" in text
+    assert "조합" in text
+    assert "교전" in text or "한타" in text

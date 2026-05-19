@@ -275,22 +275,34 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
         )
 
     reasons: list[str] = []
-    if winner_metrics and loser_metrics:
+    if loser_tech or winner_tech or loser_upgrades or winner_upgrades:
         reasons.append(
-            f"- 가장 큰 차이는 교환 효율이었습니다. {winner_name}은 손실보다 피해를 크게 앞세운 반면, {loser_name}은 잘 큰 구간 이후 교환이 비싸게 일어났습니다."
+            _build_timing_reason(
+                loser_name=loser_name,
+                winner_name=winner_name,
+                loser_tech=loser_tech,
+                winner_tech=winner_tech,
+                loser_upgrades=loser_upgrades,
+                winner_upgrades=winner_upgrades,
+            )
         )
-    if loser_worker_trend or winner_worker_trend:
-        reasons.append(_build_worker_trend_reason(loser_name, loser_worker_trend, winner_name, winner_worker_trend))
-    if loser_tech:
+    if loser_composition or winner_composition:
         reasons.append(
-            f"- {loser_name}의 체제 연결은 {', '.join(loser_tech[:3])} 흐름이었는데, 이 중 보조 테크가 늦어진 구간이 교전 완성도를 떨어뜨렸을 가능성이 큽니다."
-        )
-    if winner_tech or winner_upgrades:
-        reasons.append(
-            f"- {winner_name}은 {', '.join((winner_tech + winner_upgrades)[:4])}처럼 핵심 전투 수단을 먼저 갖추며 교전 설계를 더 쉽게 했습니다."
+            _build_composition_reason(
+                loser_name=loser_name,
+                winner_name=winner_name,
+                loser_composition=loser_composition,
+                winner_composition=winner_composition,
+            )
         )
     if combat_swings:
         reasons.append(_build_combat_swing_reason(combat_swings, loser_name=loser_name, winner_name=winner_name))
+    if winner_metrics and loser_metrics:
+        reasons.append(
+            f"- 자원 효율 자체도 결과를 뒷받침했습니다. {winner_name}은 손실보다 피해를 더 크게 냈고, {loser_name}은 잘 큰 구간 뒤에도 그 이득을 교전 승리로 연결하지 못했습니다."
+        )
+    if loser_worker_trend or winner_worker_trend:
+        reasons.append(_build_worker_trend_reason(loser_name, loser_worker_trend, winner_name, winner_worker_trend))
 
     feedback = _matchup_feedback_bundle(
         matchup=matchup,
@@ -405,6 +417,36 @@ def _worker_trend_for_player(worker_trends: dict[str, list[dict[str, Any]]], pla
 
 def _format_composition(units: list[tuple[str, int]]) -> list[str]:
     return [f"{name} {count}" for name, count in units[:3]]
+
+
+def _build_timing_reason(
+    loser_name: str,
+    winner_name: str,
+    loser_tech: list[str],
+    winner_tech: list[str],
+    loser_upgrades: list[str],
+    winner_upgrades: list[str],
+) -> str:
+    loser_flow = ", ".join((loser_upgrades + loser_tech)[:4]) or "핵심 체제 연결"
+    winner_flow = ", ".join((winner_upgrades + winner_tech)[:4]) or "핵심 전투 수단"
+    return (
+        f"- 빌드와 체제 선점부터 차이가 났습니다. {loser_name}은 {loser_flow} 흐름이었지만 후속 연결이 늦었고, "
+        f"{winner_name}은 {winner_flow}를 더 매끄럽게 맞추며 먼저 싸움 각을 만들었습니다."
+    )
+
+
+def _build_composition_reason(
+    loser_name: str,
+    winner_name: str,
+    loser_composition: list[tuple[str, int]],
+    winner_composition: list[tuple[str, int]],
+) -> str:
+    loser_units = ", ".join(_format_composition(loser_composition)) or "병력 정보 부족"
+    winner_units = ", ".join(_format_composition(winner_composition)) or "병력 정보 부족"
+    return (
+        f"- 유닛 조합과 싸움 구도도 중요했습니다. {loser_name}은 {loser_units} 중심이었고, "
+        f"{winner_name}은 {winner_units} 중심으로 교전을 열어 조합상 더 편한 전투를 만들었습니다."
+    )
 
 
 def _build_worker_trend_reason(
