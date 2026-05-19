@@ -38,6 +38,16 @@
 - Google Drive 웹에서: `내 드라이브` 아래에 `star2-replay` 바로가기 표시
 - macOS Finder 또는 Windows 파일 탐색기에서: **`Google Drive > 내 드라이브 > star2-replay`가 실제로 보임**
 
+아래처럼 Finder/파일 탐색기에서 **`내 드라이브` 안에 `star2-replay`가 보여야 정상**입니다.
+
+![Finder에서 내 드라이브 아래 star2-replay가 보이는 예시](assets/finder-my-drive-star2-replay.png)
+
+이미지 기준으로 확인할 포인트:
+- 상단 위치가 **`내 드라이브`** 여야 합니다.
+- 목록에 **`star2-replay`** 가 보여야 합니다.
+- 종류가 가상본/바로가기처럼 보이더라도, **탐색기에서 이 항목이 실제로 보여야 다음 단계 진행이 쉽습니다.**
+- 이 상태가 되어야 로컬 Google Drive 경로에서 `star2-replay` 안으로 들어가 리플레이를 넣거나 연결할 수 있습니다.
+
 즉, 사용자 입장에서는
 **공유 링크 수락 → 내 드라이브에 바로가기 추가 → Finder/파일 탐색기에서 `star2-replay` 확인**까지가 한 세트입니다.
 
