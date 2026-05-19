@@ -4,6 +4,7 @@ __pycache__/
 logs/
 state/
 .env
+sample_replays/*.SC2Replay
 *.pyc
 *.pyo
 *.DS_Store
