@@ -36,6 +36,7 @@ def test_run_once_dry_run_processes_new_replay(tmp_path: Path, monkeypatch) -> N
         state_path=tmp_path / "state.json",
         guides_dir=guides_dir,
         slack_webhook_url="",
+        analyzer_mode="heuristic",
         llm_api_key="",
         llm_api_base_url="https://api.openai.com/v1",
         llm_model="gpt-4.1-mini",

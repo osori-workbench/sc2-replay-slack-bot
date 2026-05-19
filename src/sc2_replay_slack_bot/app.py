@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
 import sc2reader
 
@@ -10,6 +9,7 @@ from .config import load_config
 from .finder import find_replay_files
 from .guide_context import load_guide_context
 from .llm import LLMClient
+from .manual_analysis import build_manual_analysis, extract_summary_metrics
 from .parser import replay_to_facts
 from .prompting import build_analysis_prompt
 from .replay_store import ReplayStore
@@ -33,12 +33,18 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
         if not status.is_new:
             continue
 
-        replay = sc2reader.load_replay(str(replay_path), load_level=2)
+        replay = sc2reader.load_replay(str(replay_path), load_level=4)
         facts = replay_to_facts(replay)
         facts["replay_path"] = str(replay_path)
         facts["sha256"] = status.sha256
-        prompt = build_analysis_prompt(facts, guide_context=guide_context)
-        analysis = llm.analyze(prompt)
+        facts["summary_metrics"] = extract_summary_metrics(replay)
+
+        if config.analyzer_mode == "openai":
+            prompt = build_analysis_prompt(facts, guide_context=guide_context)
+            analysis = llm.analyze(prompt)
+        else:
+            analysis = build_manual_analysis(facts, guide_context=guide_context)
+
         slack_text = build_slack_text(facts, analysis, replay_name=replay_path.name)
 
         if not dry_run:

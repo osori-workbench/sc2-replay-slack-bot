@@ -13,6 +13,7 @@ class AppConfig:
     state_path: Path
     guides_dir: Path
     slack_webhook_url: str
+    analyzer_mode: str
     llm_api_key: str
     llm_api_base_url: str
     llm_model: str
@@ -29,6 +30,7 @@ def load_config() -> AppConfig:
         state_path=state_path,
         guides_dir=guides_dir,
         slack_webhook_url=os.getenv("SLACK_WEBHOOK_URL", ""),
+        analyzer_mode=os.getenv("ANALYZER_MODE", "heuristic").strip().lower(),
         llm_api_key=os.getenv("LLM_API_KEY", os.getenv("OPENAI_API_KEY", "")),
         llm_api_base_url=os.getenv("LLM_API_BASE_URL", os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")),
         llm_model=os.getenv("LLM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini")),
