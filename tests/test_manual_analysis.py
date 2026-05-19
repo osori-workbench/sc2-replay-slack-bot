@@ -35,6 +35,11 @@ def test_manual_analysis_returns_grounded_korean_sections() -> None:
     assert "승패 핵심 이유" in text
     assert "핵심 피드백 3개" in text
     assert "바로 연습할 체크리스트 3개" in text
-    assert "로보" in text or "Robotics" in text
+    assert "로봇공학 시설" in text
+    assert "자원 교환" in text
     assert "4475" in text
-    assert "점멸" in text or "Blink" in text
+    assert "점멸" in text
+    assert "BlinkTech" not in text
+    assert "RoboticsFacility" not in text
+    assert "killed" not in text
+    assert "PvT 가이드" in text or "프테전" in text
