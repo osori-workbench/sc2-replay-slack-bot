@@ -1,5 +1,9 @@
 # sc2-replay-slack-bot
 
+> **사용자 참여 안내는 `docs/user-onboarding.md`를 먼저 보시면 됩니다.**
+>
+> 핵심 흐름: **공유 Drive 링크 받기 → Google Drive 설치 → 리플레이를 공유 폴더 안 내 폴더로 저장 → Slack에서 분석 결과 받기**
+
 Google Drive로 동기화되는 StarCraft II 리플레이 폴더를 macOS에서 1분마다 스캔하고, 새 `.SC2Replay` 파일이 생기면 `sc2reader`로 메타데이터를 읽은 뒤 분석 결과를 Slack webhook으로 보내는 앱입니다. 기본값은 OpenAI API 없이 동작하는 `heuristic` 분석 모드입니다.
 
 ## 동작 방식
