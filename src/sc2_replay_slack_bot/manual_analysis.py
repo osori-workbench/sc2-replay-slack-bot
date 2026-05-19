@@ -73,6 +73,22 @@ IMPORTANT_TECH = {
 }
 
 TERM_KR = {
+    "Zealot": "광전사",
+    "Stalker": "추적자",
+    "HighTemplar": "고위 기사",
+    "Immortal": "불멸자",
+    "Archon": "집정관",
+    "Probe": "탐사정",
+    "Marine": "해병",
+    "Marauder": "불곰",
+    "SCV": "건설로봇",
+    "WidowMineBurrowed": "지뢰",
+    "SiegeTank": "공성전차",
+    "Medivac": "의료선",
+    "Zergling": "저글링",
+    "Baneling": "맹독충",
+    "Roach": "바퀴",
+    "Hydralisk": "히드라리스크",
     "BlinkTech": "점멸",
     "Charge": "돌진",
     "PsiStormTech": "사이오닉 폭풍",
@@ -125,7 +141,15 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         return {}
 
     tracker_events = list(getattr(replay, "tracker_events", []) or [])
-    summary: dict[str, Any] = {"economy": {}, "upgrades": {}, "tech": {}, "army": {}}
+    summary: dict[str, Any] = {
+        "economy": {},
+        "upgrades": {},
+        "tech": {},
+        "army": {},
+        "composition": {},
+        "worker_trends": {},
+        "combat_swings": [],
+    }
 
     for player in players:
         stats = [
@@ -135,14 +159,26 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         ]
         if stats:
             final = stats[-1]
+            resources_lost = getattr(final, "resources_lost", 0)
+            resources_killed = getattr(final, "resources_killed", 0)
             summary["economy"][player.name] = {
                 "race": player.play_race,
                 "workers_max": max(getattr(event, "workers_active_count", 0) for event in stats),
-                "resources_lost": getattr(final, "resources_lost", 0),
-                "resources_killed": getattr(final, "resources_killed", 0),
+                "resources_lost": resources_lost,
+                "resources_killed": resources_killed,
                 "food_used_final": getattr(final, "food_used", 0),
                 "food_made_final": getattr(final, "food_made", 0),
+                "resource_efficiency_ratio": round(resources_killed / max(resources_lost, 1), 2),
             }
+            summary["worker_trends"][player.name] = [
+                {
+                    "time": _format_time(getattr(event, "second", 0)),
+                    "workers": getattr(event, "workers_active_count", 0),
+                    "resources_killed": getattr(event, "resources_killed", 0),
+                    "resources_lost": getattr(event, "resources_lost", 0),
+                }
+                for event in stats[:8]
+            ]
 
         upgrades: list[str] = []
         seen_upgrades: set[str] = set()
@@ -173,7 +209,11 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
             for unit in getattr(player, "units", [])
             if getattr(unit, "name", "")
         )
-        summary["army"][player.name] = built.most_common(8)
+        top_units = built.most_common(8)
+        summary["army"][player.name] = top_units
+        summary["composition"][player.name] = top_units
+
+    summary["combat_swings"] = _extract_combat_swings(tracker_events, players)
 
     return summary
 
@@ -189,6 +229,9 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
     economy = summary_metrics.get("economy", {}) or {}
     upgrades = summary_metrics.get("upgrades", {}) or {}
     tech = summary_metrics.get("tech", {}) or {}
+    composition = summary_metrics.get("composition", {}) or summary_metrics.get("army", {}) or {}
+    worker_trends = summary_metrics.get("worker_trends", {}) or {}
+    combat_swings = summary_metrics.get("combat_swings", []) or []
 
     winner_player = next((player for player in players if player.get("name") == winner), players[0] if players else {})
     loser_player = next((player for player in players if player.get("name") != winner), players[-1] if players else {})
@@ -203,6 +246,10 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
     loser_upgrades = _events_for_player(upgrades, loser_player)
     winner_tech = _events_for_player(tech, winner_player)
     loser_tech = _events_for_player(tech, loser_player)
+    winner_composition = _composition_for_player(composition, winner_player)
+    loser_composition = _composition_for_player(composition, loser_player)
+    winner_worker_trend = _worker_trend_for_player(worker_trends, winner_player)
+    loser_worker_trend = _worker_trend_for_player(worker_trends, loser_player)
 
     summary_lines = [
         f"- {map_name}에서 열린 {matchup_kr} 경기이며, 총 {game_length} 만에 {winner_name}({winner_race_kr})가 승리했습니다.",
@@ -210,6 +257,9 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
     if winner_metrics and loser_metrics:
         summary_lines.append(
             f"- 자원 교환비는 {winner_name} 쪽이 더 좋았습니다. {winner_name}은 자원 피해 {winner_metrics.get('resources_killed', 0)}, 자원 손실 {winner_metrics.get('resources_lost', 0)}였고, {loser_name}은 자원 피해 {loser_metrics.get('resources_killed', 0)}, 자원 손실 {loser_metrics.get('resources_lost', 0)}였습니다."
+        )
+        summary_lines.append(
+            f"- 자원 효율은 {winner_name} {winner_metrics.get('resource_efficiency_ratio', 0)}배, {loser_name} {loser_metrics.get('resource_efficiency_ratio', 0)}배 수준으로 집계됐습니다."
         )
         if loser_metrics.get("workers_max", 0) >= winner_metrics.get("workers_max", 0):
             summary_lines.append(
@@ -219,12 +269,18 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
         summary_lines.append(f"- 패배한 쪽 핵심 업그레이드는 {', '.join(loser_upgrades[:3])} 순으로 확인됩니다.")
     if winner_upgrades:
         summary_lines.append(f"- 승리한 쪽 핵심 업그레이드는 {', '.join(winner_upgrades[:3])} 순으로 확인됩니다.")
+    if loser_composition or winner_composition:
+        summary_lines.append(
+            f"- 유닛 조합은 {loser_name}이 {', '.join(_format_composition(loser_composition)) or '정보 부족'}, {winner_name}이 {', '.join(_format_composition(winner_composition)) or '정보 부족'} 중심이었습니다."
+        )
 
     reasons: list[str] = []
     if winner_metrics and loser_metrics:
         reasons.append(
             f"- 가장 큰 차이는 교환 효율이었습니다. {winner_name}은 손실보다 피해를 크게 앞세운 반면, {loser_name}은 잘 큰 구간 이후 교환이 비싸게 일어났습니다."
         )
+    if loser_worker_trend or winner_worker_trend:
+        reasons.append(_build_worker_trend_reason(loser_name, loser_worker_trend, winner_name, winner_worker_trend))
     if loser_tech:
         reasons.append(
             f"- {loser_name}의 체제 연결은 {', '.join(loser_tech[:3])} 흐름이었는데, 이 중 보조 테크가 늦어진 구간이 교전 완성도를 떨어뜨렸을 가능성이 큽니다."
@@ -233,6 +289,8 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
         reasons.append(
             f"- {winner_name}은 {', '.join((winner_tech + winner_upgrades)[:4])}처럼 핵심 전투 수단을 먼저 갖추며 교전 설계를 더 쉽게 했습니다."
         )
+    if combat_swings:
+        reasons.append(_build_combat_swing_reason(combat_swings, loser_name=loser_name, winner_name=winner_name))
 
     feedback = _matchup_feedback_bundle(
         matchup=matchup,
@@ -247,13 +305,6 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
         guide_context=guide_context,
     )
 
-    checklist = _checklist_bundle(
-        matchup=matchup,
-        loser_metrics=loser_metrics,
-        loser_upgrades=loser_upgrades,
-        loser_tech=loser_tech,
-    )
-
     sections = [
         "경기 요약",
         *summary_lines,
@@ -263,9 +314,6 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
         "",
         "핵심 피드백 3개",
         *feedback,
-        "",
-        "바로 연습할 체크리스트 3개",
-        *checklist,
     ]
     return "\n".join(sections)
 
@@ -327,32 +375,6 @@ def _economy_feedback_line(
     return f"- {winner_name} 쪽이 경제와 교전 전환을 더 매끄럽게 했습니다. 다음 복기에서는 일꾼 최대치와 자원 손실 비율을 같이 보는 습관을 들이면 좋습니다."
 
 
-def _checklist_bundle(matchup: str, loser_metrics: dict[str, Any], loser_upgrades: list[str], loser_tech: list[str]) -> list[str]:
-    if matchup == "PvT":
-        first = "- 다음 프테전 리플레이 3개를 골라 점멸 완료 시점, 로봇공학 시설 완성 시점, 첫 관측선/분광기 시점을 따로 적어보세요."
-    elif matchup == "ZvT":
-        first = "- 다음 저테전 리플레이 3개를 골라 4~5분 정찰 결과, 점막 연결 상태, 여왕 위치를 한 줄씩 메모해보세요."
-    elif matchup == "TvZ":
-        first = "- 다음 테저전 리플레이 3개를 골라 사신 정찰, 화염차 첫 출발, 3사령부 타이밍을 나란히 적어보세요."
-    else:
-        first = "- 같은 매치업 리플레이 3개를 다시 보며 첫 정찰 정보와 첫 핵심 테크 완성 시점을 메모해보세요."
-
-    joined = ", ".join((loser_upgrades + loser_tech)[:3])
-    second = (
-        f"- 이번 경기 기준 핵심 타이밍({joined}) 이후에 무엇을 바로 붙였는지 체크해서, 업그레이드-유닛-확장 연결이 끊긴 지점을 찾으세요."
-        if joined
-        else "- 핵심 업그레이드가 눌린 직후 어떤 생산 건물과 유닛을 붙였는지 추적해보세요."
-    )
-
-    workers = loser_metrics.get("workers_max")
-    third = (
-        f"- 일꾼 최대치 {workers}를 찍은 뒤 자원 손실이 커졌다면, 그 구간 전후의 교전 위치와 보조 유닛 구성을 다시 확인하세요."
-        if workers
-        else "- 교전 직전 자원 은행과 일꾼 수를 함께 보면서 '잘 큰 뒤 왜 못 이겼는지'를 복기해보세요."
-    )
-    return [first, second, third]
-
-
 def _metrics_for_player(metrics: dict[str, Any], player: dict[str, Any]) -> dict[str, Any]:
     for key in filter(None, [player.get("name"), player.get("race")]):
         if key in metrics:
@@ -365,6 +387,98 @@ def _events_for_player(events: dict[str, list[str]], player: dict[str, Any]) -> 
         if key in events:
             return [_localize_event_text(event) for event in events[key]]
     return []
+
+
+def _composition_for_player(composition: dict[str, list[tuple[str, int]]], player: dict[str, Any]) -> list[tuple[str, int]]:
+    for key in filter(None, [player.get("name"), player.get("race")]):
+        if key in composition:
+            return [(str(name), int(count)) for name, count in composition[key]]
+    return []
+
+
+def _worker_trend_for_player(worker_trends: dict[str, list[dict[str, Any]]], player: dict[str, Any]) -> list[dict[str, Any]]:
+    for key in filter(None, [player.get("name"), player.get("race")]):
+        if key in worker_trends:
+            return worker_trends[key]
+    return []
+
+
+def _format_composition(units: list[tuple[str, int]]) -> list[str]:
+    return [f"{name} {count}" for name, count in units[:3]]
+
+
+def _build_worker_trend_reason(
+    loser_name: str,
+    loser_worker_trend: list[dict[str, Any]],
+    winner_name: str,
+    winner_worker_trend: list[dict[str, Any]],
+) -> str:
+    loser_peak = max(loser_worker_trend, key=lambda item: item.get("workers", 0), default={})
+    winner_peak = max(winner_worker_trend, key=lambda item: item.get("workers", 0), default={})
+    loser_peak_time = loser_peak.get("time", "알 수 없음")
+    winner_peak_time = winner_peak.get("time", "알 수 없음")
+    return (
+        f"- 일꾼 수 증감 기준으로 보면 {loser_name}는 {loser_peak_time}에 {loser_peak.get('workers', 0)}기, "
+        f"{winner_name}은 {winner_peak_time}에 {winner_peak.get('workers', 0)}기까지 확보했습니다. "
+        f"이후 전투 교환비가 어느 쪽으로 기울었는지 함께 보면 운영 우위를 언제 잃었는지 더 분명하게 보입니다."
+    )
+
+
+def _build_combat_swing_reason(combat_swings: list[dict[str, Any]], loser_name: str, winner_name: str) -> str:
+    top = combat_swings[0]
+    swing_winner = top.get("winner", "Unknown")
+    delta = top.get("resource_delta", 0)
+    window = top.get("window", "알 수 없음")
+    if swing_winner == winner_name:
+        return f"- 가장 큰 전투 스윙은 {window} 교전이었고, 이 구간에서 {winner_name}가 자원 격차 {delta}만큼 이득을 보며 승기를 굳혔습니다."
+    if swing_winner == loser_name:
+        return f"- 가장 큰 전투 스윙은 {window} 교전이었고, 이 구간에서는 {loser_name}가 자원 격차 {delta}만큼 이득을 봤지만 이후 후속 교환을 지키지 못한 것으로 보입니다."
+    return f"- 가장 큰 전투 스윙은 {window} 교전이었고, 자원 격차는 {delta} 정도였습니다."
+
+
+def _extract_combat_swings(tracker_events: list[Any], players: list[Any]) -> list[dict[str, Any]]:
+    windows: dict[int, dict[str, int]] = {}
+    player_names = {player: getattr(player, "name", "Unknown") for player in players}
+
+    for event in tracker_events:
+        if type(event).__name__ != "UnitDiedEvent":
+            continue
+        killer = getattr(event, "killing_player", None)
+        if killer is None:
+            continue
+        unit = getattr(event, "unit", None)
+        resource_value = int(getattr(unit, "minerals", 0) or 0) + int(getattr(unit, "vespene", 0) or 0)
+        if resource_value <= 0:
+            continue
+        bucket = int(getattr(event, "second", 0) or 0) // 60
+        name = player_names.get(killer)
+        if not name:
+            continue
+        windows.setdefault(bucket, {})
+        windows[bucket][name] = windows[bucket].get(name, 0) + resource_value
+
+    swings: list[dict[str, Any]] = []
+    for bucket, by_player in windows.items():
+        if len(by_player) < 2:
+            winner, score = next(iter(by_player.items()))
+            delta = score
+        else:
+            ordered = sorted(by_player.items(), key=lambda item: item[1], reverse=True)
+            winner, score = ordered[0]
+            delta = score - ordered[1][1]
+        if delta <= 0:
+            continue
+        swings.append(
+            {
+                "window": f"{bucket}:00-{bucket + 1}:00",
+                "winner": winner,
+                "resource_delta": delta,
+                "resources_killed": by_player,
+            }
+        )
+
+    swings.sort(key=lambda item: item.get("resource_delta", 0), reverse=True)
+    return swings[:5]
 
 
 def _localize_event_text(event_text: str) -> str:
