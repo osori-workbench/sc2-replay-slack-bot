@@ -65,22 +65,59 @@
 
 ---
 
-## 3) 스타2 리플레이가 공유 Drive 안 내 폴더로 들어가게 설정합니다
+## 3) 스타2 리플레이가 공유 Drive 안 내 폴더로 자동 들어가게 연결합니다
 가장 중요한 단계입니다.
 
 목표는 **게임이 끝날 때 생성되는 `.SC2Replay` 파일이 자동으로 공유 Drive 안 내 폴더에 생기게 하는 것**입니다.
 
-### 추천 방식
+### 권장 구조
 - 공유 Drive 안에 **본인 이름 폴더**를 하나 만듭니다.
-  - 예: `공유폴더/osori/`
-- 스타2 리플레이가 그 폴더로 저장되거나, 최소한 그 폴더로 자동 복사/동기화되게 설정합니다.
+  - 예: `star2-replay/kihoon/`
+- 최종적으로 스타2가 저장하는 `Multiplayer` 폴더가 **그 Google Drive 폴더를 바라보게** 만들면 가장 편합니다.
+
+즉, 매 게임 후 수동 복사를 하지 말고:
+- 스타2는 평소처럼 `Multiplayer`에 리플레이를 저장하고
+- 그 `Multiplayer`가 실제로는 `Google Drive > 내 드라이브 > star2-replay > 내이름폴더`를 가리키게 구성하는 방식입니다.
+
+### Windows에서 가장 쉬운 방법: 폴더 이름 바꾸기 + `mklink /J`
+Windows 사용자는 보통 아래 순서로 연결하는 것이 가장 단순합니다.
+
+1. 기존 리플레이 폴더 위치를 찾습니다.
+   - 예:
+     - `C:\Users\osori\Documents\StarCraft II\Accounts\1041828842-S2-1-1987820\Replays\Multiplayer`
+2. 기존 `Multiplayer` 폴더 이름을 바꾸거나 다른 곳으로 옮깁니다.
+   - 예: `Multiplayer_backup`
+3. Google Drive 쪽에 본인 폴더가 있는지 확인합니다.
+   - 예:
+     - `G:\내 드라이브\star2-replay\kihoon`
+4. **관리자 권한으로 연 명령 프롬프트**에서 아래처럼 실행합니다.
+
+```bat
+mklink /J "C:\Users\osori\Documents\StarCraft II\Accounts\1041828842-S2-1-1987820\Replays\Multiplayer" "G:\내 드라이브\star2-replay\kihoon"
+```
+
+이 명령은:
+- 스타2 입장에서는 여전히 `Multiplayer` 폴더에 저장하는 것처럼 보이지만
+- 실제 파일은 `Google Drive > 내 드라이브 > star2-replay > kihoon` 안에 저장되게 만듭니다.
+
+### 연결이 잘 됐는지 확인하는 방법
+아래 3가지가 모두 맞으면 정상입니다.
+- 스타2 리플레이 경로에 `Multiplayer`가 다시 보입니다.
+- `dir` 또는 탐색기에서 보면 이 폴더가 **정션/바로가기처럼 연결된 폴더**입니다.
+- 게임 한 판 후 `.SC2Replay` 파일이 `Google Drive > 내 드라이브 > star2-replay > 내이름폴더` 쪽에 실제로 생깁니다.
 
 ### 결과적으로 이렇게 되어야 합니다
 예:
-- `Google Drive/공유폴더/osori/game1.SC2Replay`
-- `Google Drive/공유폴더/osori/game2.SC2Replay`
+- `Google Drive/내 드라이브/star2-replay/kihoon/game1.SC2Replay`
+- `Google Drive/내 드라이브/star2-replay/kihoon/game2.SC2Replay`
 
-즉, **공유 Drive 안의 본인 폴더에 `.SC2Replay` 파일이 생기면 성공**입니다.
+즉, **공유 Drive 안의 본인 폴더에 `.SC2Replay` 파일이 자동으로 생기면 성공**입니다.
+
+### 참고
+- `mklink /J`는 **관리자 권한** 명령 프롬프트에서 실행해야 합니다.
+- 계정마다 `Accounts/...` 경로 숫자가 다를 수 있으니, 본인 PC의 실제 스타2 리플레이 경로를 기준으로 바꿔 넣으세요.
+- Google Drive 드라이브 문자가 `G:`가 아닐 수도 있습니다. 탐색기에서 실제 드라이브 문자를 먼저 확인하세요.
+- 이미 `Multiplayer` 폴더가 남아 있으면 `mklink`가 실패할 수 있으니, 먼저 이름 변경 또는 이동이 필요합니다.
 
 ---
 
