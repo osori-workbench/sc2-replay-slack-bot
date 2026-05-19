@@ -1,0 +1,31 @@
+[project]
+name = "sc2-replay-slack-bot"
+version = "0.1.0"
+description = "Watch StarCraft II replays from a synced folder, analyze them with an LLM, and post reports to Slack."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "python-dotenv>=1.0.1",
+  "requests>=2.32.3",
+  "sc2reader>=1.8.0",
+  "pypdf>=5.5.0",
+]
+
+[project.scripts]
+sc2-replay-slack-bot = "sc2_replay_slack_bot.app:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.4.0",
+]
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sc2_replay_slack_bot"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"
