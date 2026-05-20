@@ -141,6 +141,7 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         return {}
 
     tracker_events = list(getattr(replay, "tracker_events", []) or [])
+    speed_factor = _speed_factor(getattr(replay, "speed", None))
     summary: dict[str, Any] = {
         "economy": {},
         "upgrades": {},
@@ -172,7 +173,7 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
             }
             summary["worker_trends"][player.name] = [
                 {
-                    "time": _format_time(getattr(event, "second", 0)),
+                    "time": _format_time(_to_real_seconds(getattr(event, "second", 0), speed_factor)),
                     "workers": getattr(event, "workers_active_count", 0),
                     "resources_killed": getattr(event, "resources_killed", 0),
                     "resources_lost": getattr(event, "resources_lost", 0),
@@ -190,7 +191,7 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
             if event_type == "UpgradeCompleteEvent" and getattr(event, "player", None) == player:
                 name = getattr(event, "upgrade_type_name", "")
                 if name in IMPORTANT_UPGRADES and name not in seen_upgrades:
-                    upgrades.append(f"{_format_time(getattr(event, 'second', 0))} {_localize_term(name)}")
+                    upgrades.append(f"{_format_time(_to_real_seconds(getattr(event, 'second', 0), speed_factor))} {_localize_term(name)}")
                     seen_upgrades.add(name)
             elif event_type in {"UnitDoneEvent", "UnitBornEvent"}:
                 unit = getattr(event, "unit", None)
@@ -198,7 +199,7 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
                     continue
                 name = getattr(unit, "name", "")
                 if name in IMPORTANT_TECH and name not in seen_tech:
-                    tech_events.append(f"{_format_time(getattr(event, 'second', 0))} {_localize_term(name)}")
+                    tech_events.append(f"{_format_time(_to_real_seconds(getattr(event, 'second', 0), speed_factor))} {_localize_term(name)}")
                     seen_tech.add(name)
 
         summary["upgrades"][player.name] = upgrades[:6]
@@ -213,7 +214,7 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         summary["army"][player.name] = top_units
         summary["composition"][player.name] = top_units
 
-    summary["combat_swings"] = _extract_combat_swings(tracker_events, players)
+    summary["combat_swings"] = _extract_combat_swings(tracker_events, players, speed_factor=speed_factor)
 
     return summary
 
@@ -478,7 +479,7 @@ def _build_combat_swing_reason(combat_swings: list[dict[str, Any]], loser_name: 
     return f"- 가장 큰 전투 스윙은 {window} 교전이었고, 자원 격차는 {delta} 정도였습니다."
 
 
-def _extract_combat_swings(tracker_events: list[Any], players: list[Any]) -> list[dict[str, Any]]:
+def _extract_combat_swings(tracker_events: list[Any], players: list[Any], speed_factor: float = 1.0) -> list[dict[str, Any]]:
     windows: dict[int, dict[str, int]] = {}
     player_names = {player: getattr(player, "name", "Unknown") for player in players}
 
@@ -492,7 +493,7 @@ def _extract_combat_swings(tracker_events: list[Any], players: list[Any]) -> lis
         resource_value = int(getattr(unit, "minerals", 0) or 0) + int(getattr(unit, "vespene", 0) or 0)
         if resource_value <= 0:
             continue
-        bucket = int(getattr(event, "second", 0) or 0) // 60
+        bucket = _to_real_seconds(int(getattr(event, "second", 0) or 0), speed_factor) // 60
         name = player_names.get(killer)
         if not name:
             continue
@@ -533,6 +534,21 @@ def _localize_event_text(event_text: str) -> str:
 def _format_time(seconds: int) -> str:
     minutes, remain = divmod(int(seconds), 60)
     return f"{minutes}:{remain:02d}"
+
+
+def _to_real_seconds(seconds: int, speed_factor: float) -> int:
+    return int(round(int(seconds) / max(speed_factor, 0.01)))
+
+
+def _speed_factor(speed: str | None) -> float:
+    mapping = {
+        "Slower": 0.6,
+        "Slow": 0.8,
+        "Normal": 1.0,
+        "Fast": 1.2,
+        "Faster": 1.4,
+    }
+    return mapping.get(str(speed or "Normal"), 1.0)
 
 
 def _localize_term(name: str) -> str:

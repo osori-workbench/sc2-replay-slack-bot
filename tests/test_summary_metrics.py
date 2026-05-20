@@ -68,6 +68,7 @@ def test_extract_summary_metrics_collects_worker_trends_composition_and_combat_s
     )
     replay = SimpleNamespace(
         players=[alpha, bravo],
+        speed="Normal",
         tracker_events=[
             _stats_event(pid=1, second=120, workers=32, killed=0, lost=100, food_used=40, food_made=46),
             _stats_event(pid=2, second=120, workers=30, killed=100, lost=0, food_used=38, food_made=46),
@@ -94,3 +95,37 @@ def test_extract_summary_metrics_collects_worker_trends_composition_and_combat_s
     assert metrics["combat_swings"][0]["winner"] == "Alpha"
     assert metrics["combat_swings"][0]["window"] == "6:00-7:00"
     assert metrics["combat_swings"][0]["resource_delta"] == 375
+
+
+def test_extract_summary_metrics_converts_faster_tracker_seconds_to_real_time() -> None:
+    alpha = FakePlayer(
+        name="Alpha",
+        race="Protoss",
+        pid=1,
+        units=[SimpleNamespace(name="Stalker")],
+    )
+    bravo = FakePlayer(
+        name="Bravo",
+        race="Terran",
+        pid=2,
+        units=[SimpleNamespace(name="Marine")],
+    )
+    replay = SimpleNamespace(
+        players=[alpha, bravo],
+        speed="Faster",
+        tracker_events=[
+            _stats_event(pid=1, second=84, workers=13, killed=0, lost=0, food_used=13, food_made=15),
+            _stats_event(pid=2, second=84, workers=13, killed=0, lost=0, food_used=13, food_made=15),
+            _upgrade_event(alpha, second=840, name="BlinkTech"),
+            _unit_event(UnitDoneEvent, owner=alpha, second=980, name="RoboticsFacility"),
+            _death_event(second=840, killing_player=alpha, minerals=200, vespene=0),
+            _death_event(second=845, killing_player=bravo, minerals=50, vespene=0),
+        ],
+    )
+
+    metrics = extract_summary_metrics(replay)
+
+    assert metrics["worker_trends"]["Alpha"][0]["time"] == "1:00"
+    assert metrics["upgrades"]["Alpha"][0].startswith("10:00 ")
+    assert metrics["tech"]["Alpha"][0].startswith("11:40 ")
+    assert metrics["combat_swings"][0]["window"] == "10:00-11:00"
