@@ -18,7 +18,7 @@ def test_build_slack_text_contains_block_style_sections() -> None:
             }
         },
     }
-    analysis = "경기 요약\n- 운영 우위\n\n승패 핵심 이유\n- 정찰 우위\n"
+    analysis = "- 경기 요약\n- 운영 우위\n\n- 승패 핵심 이유\n- 정찰 우위\n\n- 핵심 피드백 3개\n- 조합 전환"
 
     text = build_slack_text(facts, analysis, replay_name="sample.SC2Replay")
 
@@ -26,5 +26,6 @@ def test_build_slack_text_contains_block_style_sections() -> None:
     assert "sample.SC2Replay" in text
     assert "저그 vs 테란" in text
     assert "핵심 타이밍" in text
-    assert "경기 요약" in text
+    assert "*경기 요약*" in text
+    assert "*승패 핵심 이유*" in text
     assert "━━━━━━━━" in text

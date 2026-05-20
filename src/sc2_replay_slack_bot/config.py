@@ -35,8 +35,8 @@ def load_config() -> AppConfig:
         analyzer_mode=os.getenv("ANALYZER_MODE", "heuristic").strip().lower(),
         min_replay_mtime=_parse_datetime(os.getenv("MIN_REPLAY_MTIME", "").strip()),
         llm_api_key=os.getenv("LLM_API_KEY", os.getenv("OPENAI_API_KEY", "")),
-        llm_api_base_url=os.getenv("LLM_API_BASE_URL", os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")),
-        llm_model=os.getenv("LLM_MODEL", os.getenv("OPENAI_MODEL", "gpt-4.1-mini")),
+        llm_api_base_url=os.getenv("LLM_API_BASE_URL", os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:8787")),
+        llm_model=os.getenv("LLM_MODEL", os.getenv("OPENAI_MODEL", "hermes")),
     )
 
 

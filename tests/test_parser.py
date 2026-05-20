@@ -11,32 +11,49 @@ class FakeTeam:
 
 
 class FakePlayer:
-    def __init__(self, name, pick_race, play_race, avg_apm):
+    def __init__(self, name, pick_race, play_race, avg_apm, region="kr"):
         self.name = name
         self.pick_race = pick_race
         self.play_race = play_race
         self.avg_apm = avg_apm
+        self.region = region
+        self.result = None
+        self.uid = None
+        self.url = None
+        self.units = []
 
 
-
-def test_replay_to_facts_normalizes_core_fields() -> None:
+def test_replay_to_facts_includes_replay_metadata_for_hermes_context() -> None:
+    alpha = FakePlayer("Alpha", "Protoss", "Protoss", 200)
+    bravo = FakePlayer("Bravo", "Terran", "Terran", 180)
     replay = SimpleNamespace(
-        map_name="Post-Youth",
-        game_length=SimpleNamespace(seconds=754),
+        filename="sample.SC2Replay",
+        map_name="Abyssal Reef",
+        game_length=SimpleNamespace(seconds=321),
         date="2026-05-19",
         real_type="1v1",
+        type="1v1",
         category="Ladder",
         expansion="LotV",
+        release_string="5.0.14",
+        speed="Faster",
+        gateway="kr",
+        region="kr",
+        is_ladder=True,
+        build=12345,
         teams=[
-            FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 210)]),
-            FakeTeam(2, "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
+            FakeTeam(1, "Win", [alpha]),
+            FakeTeam(2, "Loss", [bravo]),
         ],
+        players=[alpha, bravo],
+        observers=[],
     )
 
     facts = replay_to_facts(replay)
 
-    assert facts["map_name"] == "Post-Youth"
-    assert facts["game_length"] == "12:34"
-    assert facts["winner"] == "Alpha"
     assert facts["matchup"] == "PvT"
-    assert facts["players"][0]["apm"] == 210
+    assert facts["replay_metadata"]["release_string"] == "5.0.14"
+    assert facts["replay_metadata"]["gateway"] == "kr"
+    assert facts["replay_metadata"]["is_ladder"] is True
+    assert facts["replay_metadata"]["teams"][0]["players"][0]["name"] == "Alpha"
+    assert facts["replay_metadata"]["players"][1]["play_race"] == "Terran"

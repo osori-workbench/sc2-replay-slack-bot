@@ -1,4 +1,4 @@
-from sc2_replay_slack_bot.prompting import build_analysis_prompt
+from sc2_replay_slack_bot.prompting import build_analysis_context, build_analysis_prompt
 
 
 def test_prompt_includes_match_context_and_richer_replay_facts() -> None:
@@ -19,13 +19,20 @@ def test_prompt_includes_match_context_and_richer_replay_facts() -> None:
         "notes": ["APM은 참고치일 뿐이다."],
     }
 
-    prompt = build_analysis_prompt(replay_facts, guide_context="Guide summary here")
+    prompt = build_analysis_prompt(replay_facts, guide_context="Read these local guide files before analysis")
+    context = build_analysis_context(
+        replay_facts,
+        guide_context="Read these local guide files before analysis",
+        guide_file_paths=["/tmp/protoss.md", "/tmp/terran.md"],
+    )
 
     assert "PvT" in prompt
-    assert "Guide summary here" in prompt
+    assert "Read these local guide files before analysis" in prompt
     assert "Alpha" in prompt
     assert "유닛 조합" in prompt
     assert "일꾼 수 증감" in prompt
     assert "전투 스윙" in prompt
     assert "바로 연습할 체크리스트" not in prompt
     assert "Slack" not in prompt
+    assert context["guide_file_paths"] == ["/tmp/protoss.md", "/tmp/terran.md"]
+    assert context["guide_context"] == "Read these local guide files before analysis"

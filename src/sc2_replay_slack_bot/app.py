@@ -8,11 +8,12 @@ import sc2reader
 
 from .config import load_config
 from .finder import find_replay_files
-from .guide_context import load_guide_context
+from .focus_player import detect_focus_player
+from .guide_context import load_guide_context, select_guide_files
 from .llm import LLMClient
 from .manual_analysis import build_manual_analysis, extract_summary_metrics
 from .parser import replay_to_facts
-from .prompting import build_analysis_prompt
+from .prompting import build_analysis_context, build_analysis_prompt
 from .replay_store import ReplayStore
 from .slack import build_slack_text, post_to_slack
 
@@ -23,7 +24,6 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
     config = load_config()
     config.replay_dir.mkdir(parents=True, exist_ok=True)
     store = ReplayStore(config.state_path)
-    guide_context = load_guide_context(config.guides_dir)
     llm = LLMClient(
         api_key=config.llm_api_key,
         base_url=config.llm_api_base_url,
@@ -46,12 +46,21 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
             facts["replay_path"] = str(replay_path)
             facts["sha256"] = status.sha256
             facts["summary_metrics"] = extract_summary_metrics(replay)
+            focus_player = detect_focus_player(replay_path, facts)
+            guide_context = load_guide_context(config.guides_dir, replay_facts=facts)
+            guide_file_paths = select_guide_files(config.guides_dir, replay_facts=facts)
 
-            if config.analyzer_mode == "openai":
-                prompt = build_analysis_prompt(facts, guide_context=guide_context)
-                analysis = llm.analyze(prompt)
-            else:
+            if config.analyzer_mode == "manual":
                 analysis = build_manual_analysis(facts, guide_context=guide_context)
+            else:
+                prompt = build_analysis_prompt(facts, guide_context=guide_context, focus_player=focus_player)
+                context = build_analysis_context(
+                    facts,
+                    guide_context=guide_context,
+                    guide_file_paths=guide_file_paths,
+                    focus_player=focus_player,
+                )
+                analysis = llm.analyze(prompt, context=context)
 
             slack_text = build_slack_text(facts, analysis, replay_name=replay_path.name)
 

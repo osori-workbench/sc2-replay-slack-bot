@@ -28,6 +28,7 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str) -> str
     winner = replay_facts.get("winner", "Unknown")
     game_length = replay_facts.get("game_length", "Unknown")
     timings = _summarize_timings(replay_facts)
+    formatted_analysis = _format_analysis_for_slack(analysis)
 
     lines = [
         "🎮 *SC2 리플레이 분석 리포트*",
@@ -49,7 +50,7 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str) -> str
     lines.extend([
         "",
         "📝 *분석 본문*",
-        analysis.strip(),
+        formatted_analysis,
         "",
         "━━━━━━━━━━━━━━━━━━",
     ])
@@ -86,3 +87,16 @@ def _summarize_timings(replay_facts: dict) -> list[str]:
         if len(items) >= 2:
             break
     return items
+
+
+def _format_analysis_for_slack(analysis: str) -> str:
+    headings = {"경기 요약", "승패 핵심 이유", "핵심 피드백 3개"}
+    formatted_lines: list[str] = []
+    for line in analysis.strip().splitlines():
+        stripped = line.strip()
+        normalized = stripped.removeprefix("- ").strip()
+        if normalized in headings:
+            formatted_lines.append(f"*{normalized}*")
+        else:
+            formatted_lines.append(line)
+    return "\n".join(formatted_lines)

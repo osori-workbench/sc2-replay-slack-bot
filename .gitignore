@@ -5,6 +5,7 @@ logs/
 state/
 .env
 sample_replays/*.SC2Replay
+tmp/
 *.pyc
 *.pyo
 *.DS_Store
