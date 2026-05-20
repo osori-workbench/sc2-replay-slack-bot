@@ -7,6 +7,7 @@ PlayerStatsEvent = type("PlayerStatsEvent", (), {})
 UpgradeCompleteEvent = type("UpgradeCompleteEvent", (), {})
 UnitBornEvent = type("UnitBornEvent", (), {})
 UnitDoneEvent = type("UnitDoneEvent", (), {})
+UnitInitEvent = type("UnitInitEvent", (), {})
 UnitDiedEvent = type("UnitDiedEvent", (), {})
 
 
@@ -129,3 +130,49 @@ def test_extract_summary_metrics_converts_faster_tracker_seconds_to_real_time() 
     assert metrics["upgrades"]["Alpha"][0].startswith("10:00 ")
     assert metrics["tech"]["Alpha"][0].startswith("11:40 ")
     assert metrics["combat_swings"][0]["window"] == "10:00-11:00"
+
+
+def test_extract_summary_metrics_includes_cross_race_signature_tech_and_units() -> None:
+    alpha = FakePlayer(
+        name="Alpha",
+        race="Zerg",
+        pid=1,
+        units=[
+            SimpleNamespace(name="Roach"),
+            SimpleNamespace(name="Hydralisk"),
+            SimpleNamespace(name="NydusWorm"),
+        ],
+    )
+    bravo = FakePlayer(
+        name="Bravo",
+        race="Zerg",
+        pid=2,
+        units=[
+            SimpleNamespace(name="Zergling"),
+            SimpleNamespace(name="Mutalisk"),
+            SimpleNamespace(name="Mutalisk"),
+        ],
+    )
+    replay = SimpleNamespace(
+        players=[alpha, bravo],
+        speed="Faster",
+        tracker_events=[
+            _stats_event(pid=1, second=84, workers=13, killed=0, lost=0, food_used=13, food_made=15),
+            _stats_event(pid=2, second=84, workers=13, killed=0, lost=0, food_used=13, food_made=15),
+            _unit_event(UnitInitEvent, owner=bravo, second=437, name="Spire"),
+            _unit_event(UnitDoneEvent, owner=bravo, second=529, name="Spire"),
+            _unit_event(UnitBornEvent, owner=bravo, second=563, name="Mutalisk"),
+            _unit_event(UnitInitEvent, owner=alpha, second=465, name="NydusNetwork"),
+            _unit_event(UnitDoneEvent, owner=alpha, second=515, name="NydusNetwork"),
+            _unit_event(UnitBornEvent, owner=alpha, second=538, name="NydusWorm"),
+        ],
+    )
+
+    metrics = extract_summary_metrics(replay)
+
+    assert any("둥지탑" in item for item in metrics["tech"]["Bravo"])
+    assert any("땅굴망" in item for item in metrics["tech"]["Alpha"])
+    assert any("뮤탈리스크" in item for item in metrics["signature_transitions"]["Bravo"])
+    assert any("땅굴벌레" in item for item in metrics["signature_transitions"]["Alpha"])
+    assert any(name == "뮤탈리스크" for name, _ in metrics["signature_units"]["Bravo"])
+    assert any(name == "땅굴벌레" for name, _ in metrics["signature_units"]["Alpha"])

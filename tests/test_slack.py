@@ -29,3 +29,30 @@ def test_build_slack_text_contains_block_style_sections() -> None:
     assert "*경기 요약*" in text
     assert "*승패 핵심 이유*" in text
     assert "━━━━━━━━" in text
+
+
+def test_build_slack_text_prefers_signature_transitions_for_key_timings() -> None:
+    facts = {
+        "map_name": "White Rabbit LE",
+        "matchup": "ZvZ",
+        "winner": "스탠딩",
+        "game_length": "14:38",
+        "players": [
+            {"name": "스탠딩", "race": "Zerg"},
+            {"name": "UMBRO", "race": "Zerg"},
+        ],
+        "summary_metrics": {
+            "signature_transitions": {
+                "스탠딩": ["6:08 땅굴망", "6:24 땅굴벌레"],
+                "UMBRO": ["6:18 둥지탑", "6:42 뮤탈리스크"],
+            },
+            "upgrades": {
+                "스탠딩": ["5:41 바퀴 속업"],
+            },
+        },
+    }
+
+    text = build_slack_text(facts, "경기 요약\n...", replay_name="sample.SC2Replay")
+
+    assert "스탠딩: 6:08 땅굴망, 6:24 땅굴벌레" in text
+    assert "UMBRO: 6:18 둥지탑, 6:42 뮤탈리스크" in text

@@ -78,14 +78,19 @@ def _display_matchup(replay_facts: dict) -> str:
 
 def _summarize_timings(replay_facts: dict) -> list[str]:
     summary_metrics = replay_facts.get("summary_metrics", {}) or {}
+    signature_transitions = summary_metrics.get("signature_transitions", {}) or {}
     upgrades = summary_metrics.get("upgrades", {}) or {}
+    tech = summary_metrics.get("tech", {}) or {}
     items: list[str] = []
-    for player_name, events in upgrades.items():
-        if not events:
-            continue
-        items.append(f"{player_name}: {', '.join(events[:2])}")
-        if len(items) >= 2:
-            break
+    player_names = []
+    for bucket in (signature_transitions, upgrades, tech):
+        for player_name, events in bucket.items():
+            if not events or player_name in player_names:
+                continue
+            items.append(f"{player_name}: {', '.join(events[:2])}")
+            player_names.append(player_name)
+            if len(items) >= 2:
+                return items
     return items
 
 

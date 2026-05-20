@@ -24,13 +24,23 @@ MATCHUP_KR = {
 }
 
 IMPORTANT_UPGRADES = {
+    # Protoss
+    "WarpGateResearch",
     "BlinkTech",
     "Charge",
     "PsiStormTech",
+    "AdeptPiercingAttack",
+    "ExtendedThermalLance",
     "ProtossGroundWeaponsLevel1",
     "ProtossGroundArmorsLevel1",
     "ProtossGroundWeaponsLevel2",
     "ProtossGroundArmorsLevel2",
+    "ProtossGroundWeaponsLevel3",
+    "ProtossGroundArmorsLevel3",
+    "ProtossAirWeaponsLevel1",
+    "ProtossAirWeaponsLevel2",
+    "ProtossAirWeaponsLevel3",
+    # Terran
     "Stimpack",
     "ShieldWall",
     "PunisherGrenades",
@@ -40,62 +50,246 @@ IMPORTANT_UPGRADES = {
     "TerranInfantryArmorsLevel2",
     "TerranInfantryWeaponsLevel3",
     "TerranInfantryArmorsLevel3",
+    "InfernalPreigniter",
+    "DrillingClaws",
+    "BansheeCloak",
+    "BattlecruiserEnableSpecializations",
+    # Zerg
     "ZerglingMovementSpeed",
+    "ZerglingAttackSpeed",
     "BanelingSpeed",
     "OverlordSpeed",
     "GlialReconstitution",
+    "TunnelingClaws",
     "CentrifugalHooks",
+    "Burrow",
+    "MuscularAugments",
+    "GroovedSpines",
 }
 
 IMPORTANT_TECH = {
-    "RoboticsFacility",
+    # Protoss structures / core tech
+    "TwilightCouncil",
+    "DarkShrine",
     "TemplarArchive",
-    "WarpPrism",
-    "Phoenix",
-    "Observer",
-    "Colossus",
+    "RoboticsFacility",
+    "RoboticsBay",
     "Stargate",
+    "FleetBeacon",
+    # Protoss signature units / deliveries
+    "Observer",
+    "WarpPrism",
+    "Immortal",
+    "Colossus",
+    "Disruptor",
+    "HighTemplar",
+    "DarkTemplar",
+    "Oracle",
+    "Phoenix",
+    "VoidRay",
+    "Carrier",
+    "Tempest",
+    "Mothership",
+    # Terran structures / core tech
+    "Factory",
+    "Starport",
+    "FusionCore",
     "GhostAcademy",
+    "Armory",
+    # Terran signature units
     "Ghost",
+    "SiegeTank",
     "SiegeTankSieged",
     "WidowMine",
     "Medivac",
+    "Liberator",
     "LiberatorAG",
-    "Factory",
-    "Starport",
+    "Banshee",
+    "Raven",
+    "VikingFighter",
+    "Thor",
+    "Battlecruiser",
+    # Zerg structures / core tech
     "RoachWarren",
     "BanelingNest",
     "Lair",
+    "Hive",
     "HydraliskDen",
     "LurkerDenMP",
+    "InfestationPit",
+    "Spire",
+    "GreaterSpire",
+    "UltraliskCavern",
+    "NydusNetwork",
+    # Zerg signature units / static defense
+    "Mutalisk",
+    "Corruptor",
+    "BroodLord",
+    "LurkerMP",
+    "SwarmHostMP",
+    "Ultralisk",
+    "Viper",
+    "Infestor",
+    "NydusWorm",
+    "Overseer",
     "SporeCrawler",
     "SpineCrawler",
+}
+
+SIGNATURE_TRANSITION_EVENTS = {
+    "DarkShrine",
+    "TemplarArchive",
+    "RoboticsFacility",
+    "RoboticsBay",
+    "Stargate",
+    "FleetBeacon",
+    "WarpPrism",
+    "Observer",
+    "Immortal",
+    "Colossus",
+    "Disruptor",
+    "HighTemplar",
+    "DarkTemplar",
+    "Oracle",
+    "Phoenix",
+    "VoidRay",
+    "Carrier",
+    "Tempest",
+    "Mothership",
+    "GhostAcademy",
+    "FusionCore",
+    "Ghost",
+    "SiegeTank",
+    "SiegeTankSieged",
+    "WidowMine",
+    "Medivac",
+    "Liberator",
+    "LiberatorAG",
+    "Banshee",
+    "Raven",
+    "VikingFighter",
+    "Thor",
+    "Battlecruiser",
+    "Hive",
+    "HydraliskDen",
+    "LurkerDenMP",
+    "InfestationPit",
+    "Spire",
+    "GreaterSpire",
+    "UltraliskCavern",
+    "NydusNetwork",
+    "Mutalisk",
+    "Corruptor",
+    "BroodLord",
+    "LurkerMP",
+    "SwarmHostMP",
+    "Ultralisk",
+    "Viper",
+    "Infestor",
+    "NydusWorm",
+}
+
+SIGNATURE_UNITS = {
+    "HighTemplar",
+    "DarkTemplar",
+    "Immortal",
+    "Colossus",
+    "Disruptor",
+    "Oracle",
+    "Phoenix",
+    "VoidRay",
+    "Carrier",
+    "Tempest",
+    "Mothership",
+    "Ghost",
+    "SiegeTank",
+    "SiegeTankSieged",
+    "WidowMine",
+    "Medivac",
+    "Liberator",
+    "LiberatorAG",
+    "Banshee",
+    "Raven",
+    "VikingFighter",
+    "Thor",
+    "Battlecruiser",
+    "Mutalisk",
+    "Corruptor",
+    "BroodLord",
+    "LurkerMP",
+    "SwarmHostMP",
+    "Ultralisk",
+    "Viper",
+    "Infestor",
+    "NydusWorm",
 }
 
 TERM_KR = {
     "Zealot": "광전사",
     "Stalker": "추적자",
+    "Adept": "사도",
+    "Sentry": "파수기",
     "HighTemplar": "고위 기사",
+    "DarkTemplar": "암흑 기사",
     "Immortal": "불멸자",
+    "Disruptor": "분열기",
+    "Colossus": "거신",
     "Archon": "집정관",
+    "Observer": "관측선",
+    "WarpPrism": "분광기",
+    "Oracle": "예언자",
+    "Phoenix": "불사조",
+    "VoidRay": "공허 포격기",
+    "Carrier": "우주모함",
+    "Tempest": "폭풍함",
+    "Mothership": "모선",
     "Probe": "탐사정",
     "Marine": "해병",
     "Marauder": "불곰",
     "SCV": "건설로봇",
+    "Ghost": "유령",
+    "WidowMine": "지뢰",
     "WidowMineBurrowed": "지뢰",
     "SiegeTank": "공성전차",
+    "SiegeTankSieged": "공성전차",
     "Medivac": "의료선",
+    "Liberator": "해방선",
+    "LiberatorAG": "해방선",
+    "Banshee": "밴시",
+    "Raven": "밤까마귀",
+    "VikingFighter": "바이킹",
+    "Thor": "토르",
+    "Battlecruiser": "전투순양함",
     "Zergling": "저글링",
     "Baneling": "맹독충",
     "Roach": "바퀴",
     "Hydralisk": "히드라리스크",
+    "Ravager": "궤멸충",
+    "Mutalisk": "뮤탈리스크",
+    "Corruptor": "타락귀",
+    "BroodLord": "무리 군주",
+    "LurkerMP": "가시지옥",
+    "SwarmHostMP": "군단 숙주",
+    "Ultralisk": "울트라리스크",
+    "Viper": "살모사",
+    "Infestor": "감염충",
+    "Overseer": "감시군주",
+    "NydusWorm": "땅굴벌레",
     "BlinkTech": "점멸",
     "Charge": "돌진",
     "PsiStormTech": "사이오닉 폭풍",
+    "WarpGateResearch": "차원 관문 연구",
+    "AdeptPiercingAttack": "공명파열포",
+    "ExtendedThermalLance": "열 광선 사거리 업그레이드",
     "ProtossGroundWeaponsLevel1": "지상 공업 1단계",
     "ProtossGroundArmorsLevel1": "지상 방업 1단계",
     "ProtossGroundWeaponsLevel2": "지상 공업 2단계",
     "ProtossGroundArmorsLevel2": "지상 방업 2단계",
+    "ProtossGroundWeaponsLevel3": "지상 공업 3단계",
+    "ProtossGroundArmorsLevel3": "지상 방업 3단계",
+    "ProtossAirWeaponsLevel1": "공중 공업 1단계",
+    "ProtossAirWeaponsLevel2": "공중 공업 2단계",
+    "ProtossAirWeaponsLevel3": "공중 공업 3단계",
     "Stimpack": "자극제",
     "ShieldWall": "전투방패",
     "PunisherGrenades": "충격탄",
@@ -105,31 +299,43 @@ TERM_KR = {
     "TerranInfantryArmorsLevel2": "보병 방업 2단계",
     "TerranInfantryWeaponsLevel3": "보병 공업 3단계",
     "TerranInfantryArmorsLevel3": "보병 방업 3단계",
+    "InfernalPreigniter": "화염차 파란불꽃",
+    "DrillingClaws": "지뢰 잠복 발톱",
+    "BansheeCloak": "밴시 은폐",
+    "BattlecruiserEnableSpecializations": "전술 차원 도약",
     "ZerglingMovementSpeed": "저글링 발업",
+    "ZerglingAttackSpeed": "아드레날린 분비선",
     "BanelingSpeed": "맹독충 속업",
     "OverlordSpeed": "대군주 속업",
     "GlialReconstitution": "바퀴 속업",
+    "TunnelingClaws": "바퀴 잠복 이동",
     "CentrifugalHooks": "맹독충 갈고리",
+    "Burrow": "잠복",
+    "MuscularAugments": "히드라 속업",
+    "GroovedSpines": "히드라 사거리 업그레이드",
+    "TwilightCouncil": "황혼 의회",
+    "DarkShrine": "암흑 성소",
     "RoboticsFacility": "로봇공학 시설",
+    "RoboticsBay": "로봇공학 지원소",
     "TemplarArchive": "기사단 기록보관소",
-    "WarpPrism": "분광기",
-    "Phoenix": "불사조",
-    "Observer": "관측선",
-    "Colossus": "거신",
     "Stargate": "우주관문",
+    "FleetBeacon": "함대 신호소",
     "GhostAcademy": "유령 사관학교",
-    "Ghost": "유령",
-    "SiegeTankSieged": "공성전차",
-    "WidowMine": "지뢰",
-    "Medivac": "의료선",
-    "LiberatorAG": "해방선",
     "Factory": "군수공장",
     "Starport": "우주공항",
+    "FusionCore": "융합로",
+    "Armory": "무기고",
     "RoachWarren": "바퀴 소굴",
     "BanelingNest": "맹독충 둥지",
     "Lair": "번식지",
+    "Hive": "군락",
     "HydraliskDen": "히드라리스크 굴",
     "LurkerDenMP": "가시지옥 굴",
+    "InfestationPit": "감염 구덩이",
+    "Spire": "둥지탑",
+    "GreaterSpire": "거대 둥지탑",
+    "UltraliskCavern": "울트라리스크 동굴",
+    "NydusNetwork": "땅굴망",
     "SporeCrawler": "포자 촉수",
     "SpineCrawler": "가시 촉수",
 }
@@ -148,6 +354,8 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         "tech": {},
         "army": {},
         "composition": {},
+        "signature_units": {},
+        "signature_transitions": {},
         "worker_trends": {},
         "combat_swings": [],
     }
@@ -185,6 +393,8 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         seen_upgrades: set[str] = set()
         tech_events: list[str] = []
         seen_tech: set[str] = set()
+        signature_transitions: list[str] = []
+        seen_signature_transitions: set[str] = set()
 
         for event in tracker_events:
             event_type = type(event).__name__
@@ -193,17 +403,24 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
                 if name in IMPORTANT_UPGRADES and name not in seen_upgrades:
                     upgrades.append(f"{_format_time(_to_real_seconds(getattr(event, 'second', 0), speed_factor))} {_localize_term(name)}")
                     seen_upgrades.add(name)
-            elif event_type in {"UnitDoneEvent", "UnitBornEvent"}:
+            elif event_type in {"UnitInitEvent", "UnitDoneEvent", "UnitBornEvent"}:
                 unit = getattr(event, "unit", None)
                 if getattr(unit, "owner", None) != player:
                     continue
                 name = getattr(unit, "name", "")
+                real_seconds = _to_real_seconds(getattr(event, "second", 0), speed_factor)
+                if real_seconds <= 0:
+                    continue
                 if name in IMPORTANT_TECH and name not in seen_tech:
-                    tech_events.append(f"{_format_time(_to_real_seconds(getattr(event, 'second', 0), speed_factor))} {_localize_term(name)}")
+                    tech_events.append(f"{_format_time(real_seconds)} {_localize_term(name)}")
                     seen_tech.add(name)
+                if name in SIGNATURE_TRANSITION_EVENTS and name not in seen_signature_transitions:
+                    signature_transitions.append(f"{_format_time(real_seconds)} {_localize_term(name)}")
+                    seen_signature_transitions.add(name)
 
-        summary["upgrades"][player.name] = upgrades[:6]
-        summary["tech"][player.name] = tech_events[:6]
+        summary["upgrades"][player.name] = upgrades[:8]
+        summary["tech"][player.name] = tech_events[:8]
+        summary["signature_transitions"][player.name] = signature_transitions[:8]
 
         built = Counter(
             _localize_term(getattr(unit, "name", ""))
@@ -213,6 +430,11 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         top_units = built.most_common(8)
         summary["army"][player.name] = top_units
         summary["composition"][player.name] = top_units
+        summary["signature_units"][player.name] = [
+            (name, count)
+            for name, count in top_units + [( _localize_term(raw_name), built[_localize_term(raw_name)] ) for raw_name in SIGNATURE_UNITS if built.get(_localize_term(raw_name), 0) > 0]
+            if count > 0
+        ]
 
     summary["combat_swings"] = _extract_combat_swings(tracker_events, players, speed_factor=speed_factor)
 
