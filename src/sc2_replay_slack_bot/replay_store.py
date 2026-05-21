@@ -29,12 +29,15 @@ class ReplayStore:
             return ReplayStatus(is_new=False, reason="unchanged", sha256=sha256)
 
         reason = "new_file" if previous is None else "content_changed"
+        return ReplayStatus(is_new=True, reason=reason, sha256=sha256)
+
+    def mark_processed(self, replay_path: Path, sha256: str) -> None:
+        key = str(Path(replay_path).resolve())
         self._state[key] = sha256
         self.state_path.write_text(
             json.dumps(self._state, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        return ReplayStatus(is_new=True, reason=reason, sha256=sha256)
 
     def _load(self) -> dict[str, str]:
         if not self.state_path.exists():

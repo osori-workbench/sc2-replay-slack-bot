@@ -19,6 +19,8 @@ from .slack import build_slack_text, post_to_slack
 
 logger = logging.getLogger(__name__)
 
+MIN_REVIEW_GAME_LENGTH_SECONDS = 60
+
 
 def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
     config = load_config()
@@ -46,6 +48,16 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
             facts["replay_path"] = str(replay_path)
             facts["sha256"] = status.sha256
             facts["summary_metrics"] = extract_summary_metrics(replay)
+
+            if facts.get("game_length_seconds", 0) < MIN_REVIEW_GAME_LENGTH_SECONDS:
+                logger.info(
+                    "Skipping short replay review for %s because game length was %s seconds",
+                    replay_path,
+                    facts.get("game_length_seconds", 0),
+                )
+                store.mark_processed(replay_path, status.sha256)
+                continue
+
             focus_player = detect_focus_player(replay_path, facts)
             guide_context = load_guide_context(config.guides_dir, replay_facts=facts)
             guide_file_paths = select_guide_files(config.guides_dir, replay_facts=facts)
@@ -69,6 +81,7 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
                     raise ValueError("SLACK_WEBHOOK_URL is required unless --dry-run is used")
                 post_to_slack(config.slack_webhook_url, slack_text)
 
+            store.mark_processed(replay_path, status.sha256)
             processed.append(
                 {
                     "replay": replay_path.name,

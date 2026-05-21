@@ -36,4 +36,5 @@ def test_llm_client_calls_hermes_ask_api_and_returns_answer(monkeypatch) -> None
     assert captured["json"]["prompt"] == "분석 지침"
     assert captured["json"]["context"]["replay_facts"]["map_name"] == "Abyssal Reef"
     assert captured["json"]["context"]["guide_context"] == "Guide summary"
-    assert captured["timeout"] == 60
+    assert captured["json"]["options"]["timeout_sec"] == 120
+    assert captured["timeout"] == 120

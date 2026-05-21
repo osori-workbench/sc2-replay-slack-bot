@@ -213,3 +213,127 @@ def test_run_once_skips_unreadable_replay_and_continues(tmp_path: Path, monkeypa
 
     assert len(results) == 1
     assert results[0]["replay"] == "good.SC2Replay"
+
+
+def test_run_once_does_not_mark_replay_processed_when_analysis_fails(tmp_path: Path, monkeypatch) -> None:
+    replay_dir = tmp_path / "replays"
+    replay_dir.mkdir()
+    replay_path = replay_dir / "sample.SC2Replay"
+    replay_path.write_bytes(b"replay")
+
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    (guides_dir / "protoss.md").write_text("# Guide\nhello", encoding="utf-8")
+
+    config = AppConfig(
+        replay_dir=replay_dir,
+        state_path=tmp_path / "state.json",
+        guides_dir=guides_dir,
+        slack_webhook_url="",
+        analyzer_mode="heuristic",
+        min_replay_mtime=None,
+        llm_api_key="",
+        llm_api_base_url="http://127.0.0.1:8787",
+        llm_model="hermes",
+    )
+
+    replay = SimpleNamespace(
+        map_name="Abyssal Reef",
+        game_length=SimpleNamespace(seconds=321),
+        date="2026-05-19",
+        real_type="1v1",
+        category="Ladder",
+        expansion="LotV",
+        release_string="5.0.14",
+        speed="Faster",
+        type="1v1",
+        is_ladder=True,
+        teams=[
+            FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
+            FakeTeam(2, "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
+        ],
+        players=[
+            FakePlayer("Alpha", "Protoss", "Protoss", 200),
+            FakePlayer("Bravo", "Terran", "Terran", 180),
+        ],
+        tracker_events=[],
+    )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.load_config", lambda: config)
+    monkeypatch.setattr("sc2_replay_slack_bot.app.sc2reader.load_replay", lambda *_args, **_kwargs: replay)
+
+    def failing_analyze(self, prompt: str, context: dict | None = None) -> str:
+        raise TimeoutError("Hermes timed out")
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.LLMClient.analyze", failing_analyze)
+
+    results = run_once(dry_run=True, max_files=5)
+
+    assert results == []
+    state_text = config.state_path.read_text(encoding="utf-8") if config.state_path.exists() else "{}"
+    assert replay_path.resolve().as_posix() not in state_text
+
+
+def test_run_once_skips_short_games_under_one_minute_without_review(tmp_path: Path, monkeypatch) -> None:
+    replay_dir = tmp_path / "replays"
+    replay_dir.mkdir()
+    replay_path = replay_dir / "short.SC2Replay"
+    replay_path.write_bytes(b"replay")
+
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+
+    config = AppConfig(
+        replay_dir=replay_dir,
+        state_path=tmp_path / "state.json",
+        guides_dir=guides_dir,
+        slack_webhook_url="",
+        analyzer_mode="heuristic",
+        min_replay_mtime=None,
+        llm_api_key="",
+        llm_api_base_url="http://127.0.0.1:8787",
+        llm_model="hermes",
+    )
+
+    replay = SimpleNamespace(
+        map_name="Abyssal Reef",
+        game_length=SimpleNamespace(seconds=59),
+        date="2026-05-19",
+        real_type="1v1",
+        category="Ladder",
+        expansion="LotV",
+        release_string="5.0.14",
+        speed="Faster",
+        type="1v1",
+        is_ladder=True,
+        teams=[
+            FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
+            FakeTeam(2, "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
+        ],
+        players=[
+            FakePlayer("Alpha", "Protoss", "Protoss", 200),
+            FakePlayer("Bravo", "Terran", "Terran", 180),
+        ],
+        tracker_events=[],
+    )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.load_config", lambda: config)
+    monkeypatch.setattr("sc2_replay_slack_bot.app.sc2reader.load_replay", lambda *_args, **_kwargs: replay)
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.LLMClient.analyze",
+        lambda *_args, **_kwargs: pytest.fail("short games should not be analyzed"),
+    )
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.build_manual_analysis",
+        lambda *_args, **_kwargs: pytest.fail("short games should not be manually analyzed"),
+    )
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.post_to_slack",
+        lambda *_args, **_kwargs: pytest.fail("short games should not be posted to Slack"),
+    )
+
+    results = run_once(dry_run=False, max_files=5)
+
+    assert results == []
+    state_text = config.state_path.read_text(encoding="utf-8")
+    assert replay_path.resolve().as_posix() in state_text
