@@ -33,7 +33,9 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
     )
 
     processed: list[dict] = []
-    for replay_path in find_replay_files(config.replay_dir, min_mtime=config.min_replay_mtime)[:max_files]:
+    for replay_path in find_replay_files(config.replay_dir, min_mtime=config.min_replay_mtime):
+        if len(processed) >= max_files:
+            break
         try:
             status = store.classify(replay_path)
         except OSError as exc:

@@ -479,19 +479,8 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
     ]
     if winner_metrics and loser_metrics:
         summary_lines.append(
-            f"- 자원 교환비는 {winner_name} 쪽이 더 좋았습니다. {winner_name}은 자원 피해 {winner_metrics.get('resources_killed', 0)}, 자원 손실 {winner_metrics.get('resources_lost', 0)}였고, {loser_name}은 자원 피해 {loser_metrics.get('resources_killed', 0)}, 자원 손실 {loser_metrics.get('resources_lost', 0)}였습니다."
+            f"- {winner_name}이 자원 교환과 마무리 효율에서 앞섰습니다. 피해 {winner_metrics.get('resources_killed', 0)} / 손실 {winner_metrics.get('resources_lost', 0)}였고, {loser_name}는 일꾼 수 최대치 {loser_metrics.get('workers_max', 0)}까지는 잘 찍었지만 그 운영 이득을 승리로 잇지 못했습니다."
         )
-        summary_lines.append(
-            f"- 자원 효율은 {winner_name} {winner_metrics.get('resource_efficiency_ratio', 0)}배, {loser_name} {loser_metrics.get('resource_efficiency_ratio', 0)}배 수준으로 집계됐습니다."
-        )
-        if loser_metrics.get("workers_max", 0) >= winner_metrics.get("workers_max", 0):
-            summary_lines.append(
-                f"- 다만 {loser_name}가 일꾼 최대치 {loser_metrics.get('workers_max', 0)}로 더 크게 짼 구간이 있어, 운영 기반 자체는 나쁘지 않았던 경기로 보입니다."
-            )
-    if loser_upgrades:
-        summary_lines.append(f"- 패배한 쪽 핵심 업그레이드는 {', '.join(loser_upgrades[:3])} 순으로 확인됩니다.")
-    if winner_upgrades:
-        summary_lines.append(f"- 승리한 쪽 핵심 업그레이드는 {', '.join(winner_upgrades[:3])} 순으로 확인됩니다.")
     if loser_composition or winner_composition:
         summary_lines.append(
             f"- 유닛 조합은 {loser_name}이 {', '.join(_format_composition(loser_composition)) or '정보 부족'}, {winner_name}이 {', '.join(_format_composition(winner_composition)) or '정보 부족'} 중심이었습니다."
@@ -509,6 +498,8 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
                 winner_upgrades=winner_upgrades,
             )
         )
+    if combat_swings:
+        reasons.append(_build_combat_swing_reason(combat_swings, loser_name=loser_name, winner_name=winner_name))
     if loser_composition or winner_composition:
         reasons.append(
             _build_composition_reason(
@@ -518,11 +509,9 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
                 winner_composition=winner_composition,
             )
         )
-    if combat_swings:
-        reasons.append(_build_combat_swing_reason(combat_swings, loser_name=loser_name, winner_name=winner_name))
     if winner_metrics and loser_metrics:
         reasons.append(
-            f"- 자원 효율 자체도 결과를 뒷받침했습니다. {winner_name}은 손실보다 피해를 더 크게 냈고, {loser_name}은 잘 큰 구간 뒤에도 그 이득을 교전 승리로 연결하지 못했습니다."
+            f"- 자원 지표도 이를 뒷받침합니다. {winner_name}은 피해 {winner_metrics.get('resources_killed', 0)} / 손실 {winner_metrics.get('resources_lost', 0)}로 이득을 남겼고, {loser_name}은 잘 큰 구간 뒤 교전을 비싸게 치렀습니다."
         )
     if loser_worker_trend or winner_worker_trend:
         reasons.append(_build_worker_trend_reason(loser_name, loser_worker_trend, winner_name, winner_worker_trend))
@@ -542,13 +531,13 @@ def build_manual_analysis(replay_facts: dict[str, Any], guide_context: str = "")
 
     sections = [
         "경기 요약",
-        *summary_lines,
+        *summary_lines[:3],
         "",
         "승패 핵심 이유",
-        *(reasons or ["- 메타데이터와 추적 이벤트 기준으로만 판단했으므로 세부 교전 해석은 제한적입니다."]),
+        *((reasons or ["- 메타데이터와 추적 이벤트 기준으로만 판단했으므로 세부 교전 해석은 제한적입니다."])[:2]),
         "",
         "핵심 피드백 3개",
-        *feedback,
+        *feedback[:3],
     ]
     return "\n".join(sections)
 

@@ -162,6 +162,66 @@ def test_run_once_sets_focus_player_from_parent_directory(tmp_path: Path, monkey
     assert "유닛구성" in captured["prompt"]
 
 
+def test_run_once_processes_first_new_replay_even_if_it_sorts_after_processed_files(tmp_path: Path, monkeypatch) -> None:
+    replay_dir = tmp_path / "replays"
+    replay_dir.mkdir()
+    for index in range(1, 25):
+        (replay_dir / f"{index:02d}.SC2Replay").write_bytes(f"old-{index}".encode())
+    new_replay = replay_dir / "25.SC2Replay"
+    new_replay.write_bytes(b"new")
+
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+    config = AppConfig(
+        replay_dir=replay_dir,
+        state_path=tmp_path / "state.json",
+        guides_dir=guides_dir,
+        slack_webhook_url="",
+        analyzer_mode="manual",
+        min_replay_mtime=None,
+        llm_api_key="",
+        llm_api_base_url="https://api.openai.com/v1",
+        llm_model="gpt-4.1-mini",
+    )
+    processed_state = {
+        str((replay_dir / f"{index:02d}.SC2Replay").resolve()): __import__("hashlib").sha256(f"old-{index}".encode()).hexdigest()
+        for index in range(1, 25)
+    }
+    config.state_path.write_text(__import__("json").dumps(processed_state), encoding="utf-8")
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.load_config", lambda: config)
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.sc2reader.load_replay",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            map_name="Post-Youth",
+            game_length=SimpleNamespace(seconds=600),
+            date="2026-05-19",
+            real_type="1v1",
+            category="Ladder",
+            expansion="LotV",
+            teams=[
+                FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
+                FakeTeam(2, "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
+            ],
+            players=[
+                FakePlayer("Alpha", "Protoss", "Protoss", 200),
+                FakePlayer("Bravo", "Terran", "Terran", 180),
+            ],
+            tracker_events=[],
+        ),
+    )
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.build_manual_analysis",
+        lambda *_args, **_kwargs: "경기 요약\n- manual\n승패 핵심 이유\n- manual\n핵심 피드백 3개\n- manual",
+    )
+
+    results = run_once(dry_run=True, max_files=1)
+
+    assert len(results) == 1
+    assert results[0]["replay"] == "25.SC2Replay"
+
+
+
 def test_run_once_skips_unreadable_replay_and_continues(tmp_path: Path, monkeypatch) -> None:
     replay_dir = tmp_path / "replays"
     replay_dir.mkdir()
