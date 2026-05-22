@@ -56,3 +56,27 @@ def test_build_slack_text_prefers_signature_transitions_for_key_timings() -> Non
 
     assert "스탠딩: 6:08 땅굴망, 6:24 땅굴벌레" in text
     assert "UMBRO: 6:18 둥지탑, 6:42 뮤탈리스크" in text
+
+
+
+def test_build_slack_text_adds_focus_player_title_when_present() -> None:
+    facts = {
+        "map_name": "Ruby Rock LE",
+        "matchup": "PvZ",
+        "winner": "Undead",
+        "game_length": "07:14",
+        "players": [
+            {"name": "Undead", "race": "Protoss"},
+            {"name": "상대", "race": "Zerg"},
+        ],
+        "summary_metrics": {},
+    }
+
+    text = build_slack_text(
+        facts,
+        "경기 요약\n...",
+        replay_name="sample.SC2Replay",
+        focus_player={"name": "Undead", "race": "Protoss"},
+    )
+
+    assert "👤 *Undead 기준으로 리뷰했습니다.*" in text

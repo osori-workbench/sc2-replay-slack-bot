@@ -22,7 +22,7 @@ MATCHUP_DISPLAY = {
 }
 
 
-def build_slack_text(replay_facts: dict, analysis: str, replay_name: str) -> str:
+def build_slack_text(replay_facts: dict, analysis: str, replay_name: str, focus_player: dict | None = None) -> str:
     map_name = replay_facts.get("map_name", "Unknown")
     matchup = _display_matchup(replay_facts)
     winner = replay_facts.get("winner", "Unknown")
@@ -33,12 +33,20 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str) -> str
     lines = [
         "🎮 *SC2 리플레이 분석 리포트*",
         "━━━━━━━━━━━━━━━━━━",
+    ]
+    focus_title = _focus_player_title(focus_player)
+    if focus_title:
+        lines.extend([
+            focus_title,
+            "",
+        ])
+    lines.extend([
         f"• 파일: `{replay_name}`",
         f"• 맵: *{map_name}*",
         f"• 매치업: *{matchup}*",
         f"• 승자: *{winner}*",
         f"• 경기 시간: *{game_length}*",
-    ]
+    ])
 
     if timings:
         lines.extend([
@@ -105,3 +113,13 @@ def _format_analysis_for_slack(analysis: str) -> str:
         else:
             formatted_lines.append(line)
     return "\n".join(formatted_lines)
+
+
+
+def _focus_player_title(focus_player: dict | None) -> str:
+    if not focus_player:
+        return ""
+    name = str(focus_player.get("name") or "").strip()
+    if not name:
+        return ""
+    return f"👤 *{name} 기준으로 리뷰했습니다.*"

@@ -76,7 +76,7 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
                 )
                 analysis = llm.analyze(prompt, context=context)
 
-            slack_text = build_slack_text(facts, analysis, replay_name=replay_path.name)
+            slack_text = build_slack_text(facts, analysis, replay_name=replay_path.name, focus_player=focus_player)
 
             if not dry_run:
                 if not config.slack_webhook_url:
