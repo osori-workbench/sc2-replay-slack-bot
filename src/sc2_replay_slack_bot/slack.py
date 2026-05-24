@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import requests
 
 RACE_KR = {
@@ -27,6 +30,7 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str, focus_
     matchup = _display_matchup(replay_facts)
     winner = replay_facts.get("winner", "Unknown")
     game_length = replay_facts.get("game_length", "Unknown")
+    played_at = _format_played_at_kst(replay_facts.get("played_at"))
     timings = _summarize_timings(replay_facts)
     formatted_analysis = _format_analysis_for_slack(analysis)
 
@@ -47,6 +51,8 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str, focus_
         f"• 승자: *{winner}*",
         f"• 경기 시간: *{game_length}*",
     ])
+    if played_at:
+        lines.append(f"• 경기 시각(KST): *{played_at}*")
 
     if timings:
         lines.extend([
@@ -123,3 +129,23 @@ def _focus_player_title(focus_player: dict | None) -> str:
     if not name:
         return ""
     return f"👤 *{name} 기준으로 리뷰했습니다.*"
+
+
+
+def _format_played_at_kst(played_at: object) -> str:
+    if not played_at:
+        return ""
+    text = str(played_at).strip()
+    if not text or text == "Unknown":
+        return ""
+
+    normalized = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return text
+
+    if parsed.tzinfo is None:
+        return parsed.strftime("%Y-%m-%d %H:%M:%S")
+
+    return parsed.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")

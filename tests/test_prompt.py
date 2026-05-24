@@ -36,3 +36,25 @@ def test_prompt_includes_match_context_and_richer_replay_facts() -> None:
     assert "Slack" not in prompt
     assert context["guide_file_paths"] == ["/tmp/protoss.md", "/tmp/terran.md"]
     assert context["guide_context"] == "Read these local guide files before analysis"
+
+
+
+def test_prompt_emphasizes_upgrade_timing_and_building_pairings() -> None:
+    replay_facts = {
+        "map_name": "Site Delta",
+        "matchup": "PvT",
+        "players": [
+            {"name": "Alpha", "race": "Protoss"},
+            {"name": "Bravo", "race": "Terran"},
+        ],
+        "summary_metrics": {
+            "upgrades": {"Alpha": ["6:00 지상 공업 1단계"]},
+            "tech": {"Alpha": ["5:20 로봇공학 시설"]},
+        },
+    }
+
+    prompt = build_analysis_prompt(replay_facts)
+
+    assert "공방업" in prompt
+    assert "빠르거나 늦었는지" in prompt
+    assert "어떤 건물을 지을 때 같이 눌렀으면 좋았는지" in prompt

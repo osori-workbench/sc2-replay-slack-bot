@@ -80,3 +80,23 @@ def test_build_slack_text_adds_focus_player_title_when_present() -> None:
     )
 
     assert "👤 *Undead 기준으로 리뷰했습니다.*" in text
+
+
+
+def test_build_slack_text_shows_played_at_in_korean_time() -> None:
+    facts = {
+        "map_name": "Ruby Rock LE",
+        "matchup": "PvZ",
+        "winner": "Undead",
+        "game_length": "07:14",
+        "played_at": "2026-05-22T05:18:10+00:00",
+        "players": [
+            {"name": "Undead", "race": "Protoss"},
+            {"name": "상대", "race": "Zerg"},
+        ],
+        "summary_metrics": {},
+    }
+
+    text = build_slack_text(facts, "경기 요약\n...", replay_name="sample.SC2Replay")
+
+    assert "경기 시각(KST): *2026-05-22 14:18:10*" in text

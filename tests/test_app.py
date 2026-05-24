@@ -397,3 +397,69 @@ def test_run_once_skips_short_games_under_one_minute_without_review(tmp_path: Pa
     assert results == []
     state_text = config.state_path.read_text(encoding="utf-8")
     assert replay_path.resolve().as_posix() in state_text
+
+
+
+def test_run_once_skips_replays_with_cheater_or_ai_player_names(tmp_path: Path, monkeypatch) -> None:
+    replay_dir = tmp_path / "replays"
+    replay_dir.mkdir()
+    replay_path = replay_dir / "cheater.SC2Replay"
+    replay_path.write_bytes(b"replay")
+
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+
+    config = AppConfig(
+        replay_dir=replay_dir,
+        state_path=tmp_path / "state.json",
+        guides_dir=guides_dir,
+        slack_webhook_url="",
+        analyzer_mode="heuristic",
+        min_replay_mtime=None,
+        llm_api_key="",
+        llm_api_base_url="http://127.0.0.1:8787",
+        llm_model="hermes",
+    )
+
+    replay = SimpleNamespace(
+        map_name="Abyssal Reef",
+        game_length=SimpleNamespace(seconds=600),
+        date="2026-05-19",
+        real_type="1v1",
+        category="Ladder",
+        expansion="LotV",
+        release_string="5.0.14",
+        speed="Faster",
+        type="1v1",
+        is_ladder=True,
+        teams=[
+            FakeTeam(1, "Win", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
+            FakeTeam(2, "Loss", [FakePlayer("인공지능 칸 (정예)", "Terran", "Terran", 180)]),
+        ],
+        players=[
+            FakePlayer("Alpha", "Protoss", "Protoss", 200),
+            FakePlayer("인공지능 칸 (정예)", "Terran", "Terran", 180),
+        ],
+        tracker_events=[],
+    )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.load_config", lambda: config)
+    monkeypatch.setattr("sc2_replay_slack_bot.app.sc2reader.load_replay", lambda *_args, **_kwargs: replay)
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.LLMClient.analyze",
+        lambda *_args, **_kwargs: pytest.fail("cheater/AI replays should not be analyzed"),
+    )
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.build_manual_analysis",
+        lambda *_args, **_kwargs: pytest.fail("cheater/AI replays should not be manually analyzed"),
+    )
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.post_to_slack",
+        lambda *_args, **_kwargs: pytest.fail("cheater/AI replays should not be posted to Slack"),
+    )
+
+    results = run_once(dry_run=False, max_files=5)
+
+    assert results == []
+    state_text = config.state_path.read_text(encoding="utf-8")
+    assert replay_path.resolve().as_posix() in state_text

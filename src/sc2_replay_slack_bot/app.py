@@ -20,6 +20,7 @@ from .slack import build_slack_text, post_to_slack
 logger = logging.getLogger(__name__)
 
 MIN_REVIEW_GAME_LENGTH_SECONDS = 60
+SKIP_PLAYER_KEYWORDS = ("치터", "인공지능")
 
 
 def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
@@ -51,12 +52,9 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
             facts["sha256"] = status.sha256
             facts["summary_metrics"] = extract_summary_metrics(replay)
 
-            if facts.get("game_length_seconds", 0) < MIN_REVIEW_GAME_LENGTH_SECONDS:
-                logger.info(
-                    "Skipping short replay review for %s because game length was %s seconds",
-                    replay_path,
-                    facts.get("game_length_seconds", 0),
-                )
+            skip_reason = _skip_reason(facts)
+            if skip_reason:
+                logger.info("Skipping replay review for %s: %s", replay_path, skip_reason)
                 store.mark_processed(replay_path, status.sha256)
                 continue
 
@@ -107,6 +105,19 @@ def main() -> None:
 
     results = run_once(dry_run=args.dry_run, max_files=args.max_files)
     print(json.dumps(results, ensure_ascii=False, indent=2))
+
+
+
+def _skip_reason(replay_facts: dict) -> str | None:
+    if replay_facts.get("game_length_seconds", 0) < MIN_REVIEW_GAME_LENGTH_SECONDS:
+        return f"game length was {replay_facts.get('game_length_seconds', 0)} seconds"
+
+    for player in replay_facts.get("players", []) or []:
+        name = str(player.get("name") or "")
+        for keyword in SKIP_PLAYER_KEYWORDS:
+            if keyword in name:
+                return f"player name matched filtered keyword '{keyword}': {name}"
+    return None
 
 
 if __name__ == "__main__":

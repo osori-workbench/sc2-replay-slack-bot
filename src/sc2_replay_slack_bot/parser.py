@@ -81,14 +81,22 @@ def _serialize_team(team: Any) -> dict[str, Any]:
     }
 
 
+def _safe_getattr(obj: Any, attr: str, default: Any = None) -> Any:
+    try:
+        return getattr(obj, attr, default)
+    except (AttributeError, KeyError, ValueError):
+        return default
+
+
+
 def _serialize_player(player: Any) -> dict[str, Any]:
     return {
-        "name": getattr(player, "name", None),
-        "pick_race": getattr(player, "pick_race", None),
-        "play_race": getattr(player, "play_race", None),
-        "avg_apm": getattr(player, "avg_apm", None),
-        "region": getattr(player, "region", None),
-        "result": getattr(player, "result", None),
-        "uid": getattr(player, "uid", None),
-        "url": getattr(player, "url", None),
+        "name": _safe_getattr(player, "name"),
+        "pick_race": _safe_getattr(player, "pick_race"),
+        "play_race": _safe_getattr(player, "play_race"),
+        "avg_apm": _safe_getattr(player, "avg_apm"),
+        "region": _safe_getattr(player, "region"),
+        "result": _safe_getattr(player, "result"),
+        "uid": _safe_getattr(player, "uid"),
+        "url": _safe_getattr(player, "url"),
     }

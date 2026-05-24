@@ -57,3 +57,52 @@ def test_replay_to_facts_includes_replay_metadata_for_hermes_context() -> None:
     assert facts["replay_metadata"]["is_ladder"] is True
     assert facts["replay_metadata"]["teams"][0]["players"][0]["name"] == "Alpha"
     assert facts["replay_metadata"]["players"][1]["play_race"] == "Terran"
+
+
+class BadUrlPlayer(FakePlayer):
+    def __init__(self, name, pick_race, play_race, avg_apm, region="kr"):
+        self.name = name
+        self.pick_race = pick_race
+        self.play_race = play_race
+        self.avg_apm = avg_apm
+        self.region = region
+        self.result = None
+        self.uid = None
+        self.units = []
+
+    @property
+    def url(self):
+        raise KeyError("region_id")
+
+
+def test_replay_to_facts_tolerates_player_url_property_errors() -> None:
+    alpha = FakePlayer("Alpha", "Protoss", "Protoss", 200)
+    bravo = FakePlayer("Bravo", "Terran", "Terran", 180)
+    observer = BadUrlPlayer("스탠딩", "Zerg", "Zerg", 0)
+    replay = SimpleNamespace(
+        filename="sample.SC2Replay",
+        map_name="Abyssal Reef",
+        game_length=SimpleNamespace(seconds=321),
+        date="2026-05-19",
+        real_type="1v1",
+        type="1v1",
+        category="Ladder",
+        expansion="LotV",
+        release_string="5.0.14",
+        speed="Faster",
+        gateway="kr",
+        region="kr",
+        is_ladder=True,
+        build=12345,
+        teams=[
+            FakeTeam(1, "Win", [alpha]),
+            FakeTeam(2, "Loss", [bravo]),
+        ],
+        players=[alpha, bravo],
+        observers=[observer],
+    )
+
+    facts = replay_to_facts(replay)
+
+    assert facts["replay_metadata"]["observers"][0]["name"] == "스탠딩"
+    assert facts["replay_metadata"]["observers"][0]["url"] is None

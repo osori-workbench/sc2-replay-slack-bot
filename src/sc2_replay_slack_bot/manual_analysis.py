@@ -554,36 +554,48 @@ def _matchup_feedback_bundle(
     loser_metrics: dict[str, Any],
     guide_context: str,
 ) -> list[str]:
+    upgrade_line = _upgrade_timing_feedback_line(loser_name, loser_upgrades, loser_tech)
     if matchup == "PvT":
         first = "- PvT 가이드 기준으로 점멸 이후 관측선·거신·분광기 같은 보조 체제를 늦추지 않는 것이 중요합니다. 이번 경기도 점멸-고위기사는 갖췄지만 로봇공학 시설 연결이 늦어 한타 마무리 수단이 부족해졌을 가능성이 큽니다."
-        second = f"- {loser_name} 입장에서는 {', '.join((loser_upgrades + loser_tech)[:4]) or '주요 타이밍'} 이후에 무엇을 바로 붙였는지가 중요했습니다. 업그레이드가 좋아도 관측선/분광기/거신 같은 후속 수단이 비면 교전 효율이 급격히 떨어집니다."
+        second = upgrade_line
         third = _economy_feedback_line(loser_name, loser_metrics, winner_name, winner_metrics)
         return [first, second, third]
     if matchup == "ZvT":
         first = "- 저테전에서는 4~5분 정찰 확정, 점막 연결, 여왕 위치가 핵심입니다. 저글링·맹독충 단계에서 드랍 경로와 테란의 첫 타이밍을 얼마나 빨리 읽었는지가 경기 흐름을 크게 좌우합니다."
-        second = f"- {loser_name} 입장에서는 {', '.join((loser_upgrades + loser_tech)[:4]) or '핵심 타이밍'} 이후의 병력 전환이 더 중요했습니다. 저글링 발업이나 맹독충 둥지 타이밍이 보여도 점막·여왕·후속 라인 연결이 비면 교환비가 쉽게 무너집니다."
+        second = upgrade_line
         third = _economy_feedback_line(loser_name, loser_metrics, winner_name, winner_metrics, prefer_phrase="잘 짼 뒤 교환을 비싸게 한 경기")
         return [first, second, third]
     if matchup == "TvZ":
         first = "- 테저전에서는 사신 정찰 뒤 화염차/바이킹으로 점막과 3베이스를 늦추는 흐름이 중요합니다. 테란이 이 루프를 놓치면 저그의 드론 최적화와 테크 전환을 너무 편하게 허용하게 됩니다."
-        second = f"- {loser_name} 입장에서는 {', '.join((loser_upgrades + loser_tech)[:4]) or '핵심 타이밍'} 이후의 진출 타이밍이 어긋났을 수 있습니다. 자극제·의료선·공성전차 같은 스파이크를 한 번에 묶어야 압박 가치가 큽니다."
+        second = upgrade_line
         third = _economy_feedback_line(loser_name, loser_metrics, winner_name, winner_metrics)
         return [first, second, third]
     if matchup == "PvZ":
         first = "- 프저전에서는 우주관문 정찰 이후 트리플 판단과 방어 타워 선행 여부가 핵심입니다. 저그의 3부화장 타이밍과 병력 쥐어짜기를 놓치면 멀티 욕심이 바로 약점이 됩니다."
-        second = f"- {loser_name} 입장에서는 {', '.join((loser_upgrades + loser_tech)[:4]) or '핵심 타이밍'} 이후에 관문 수와 로보/고위기사 연결이 충분했는지 다시 볼 필요가 있습니다."
+        second = upgrade_line
         third = _economy_feedback_line(loser_name, loser_metrics, winner_name, winner_metrics)
         return [first, second, third]
     if matchup == "ZvP":
         first = "- 저프전에서는 우관·황혼·로공·3넥 타이밍 판별이 핵심입니다. 프로토스가 2베이스 가스를 많이 먹고 3넥이 늦으면 저그는 드론 중단과 병력 전환 타이밍을 분명히 잡아야 합니다."
-        second = f"- {loser_name} 입장에서는 {', '.join((loser_upgrades + loser_tech)[:4]) or '핵심 타이밍'} 뒤에 여왕·포자촉수·바퀴/맹독충 전환이 충분했는지 복기해보면 좋습니다."
+        second = upgrade_line
         third = _economy_feedback_line(loser_name, loser_metrics, winner_name, winner_metrics)
         return [first, second, third]
     return [
         f"- {MATCHUP_KR.get(matchup, matchup)}에서는 핵심 테크 타이밍과 정찰 정보 갱신을 같은 템포로 맞추는 것이 우선입니다.",
-        f"- {loser_name} 입장에서는 {', '.join((loser_upgrades + loser_tech)[:4]) or '핵심 타이밍'} 이후의 후속 연결을 더 촘촘하게 설계할 필요가 있습니다.",
+        upgrade_line,
         _economy_feedback_line(loser_name, loser_metrics, winner_name, winner_metrics),
     ]
+
+
+
+def _upgrade_timing_feedback_line(loser_name: str, loser_upgrades: list[str], loser_tech: list[str]) -> str:
+    first_upgrade = loser_upgrades[0] if loser_upgrades else "공방업 타이밍"
+    first_tech = loser_tech[0] if loser_tech else "핵심 tech 건물 타이밍"
+    return (
+        f"- {loser_name} 입장에서는 {first_upgrade} 같은 공방업이 빠르거나 늦었는지 꼭 따로 보셔야 합니다. "
+        f"{first_tech}처럼 핵심 건물을 지을 때 공업·방업 버튼도 같이 눌러 체제 완성 시점을 맞추는 습관이 중요합니다."
+    )
+
 
 
 def _economy_feedback_line(
