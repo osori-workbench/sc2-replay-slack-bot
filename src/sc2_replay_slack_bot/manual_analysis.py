@@ -340,6 +340,11 @@ TERM_KR = {
     "SpineCrawler": "가시 촉수",
 }
 
+CANONICAL_TERM_BY_LOWER = {
+    name.lower(): name
+    for name in IMPORTANT_UPGRADES | IMPORTANT_TECH | SIGNATURE_TRANSITION_EVENTS | SIGNATURE_UNITS | set(TERM_KR)
+}
+
 
 def extract_summary_metrics(replay: Any) -> dict[str, Any]:
     players = list(getattr(replay, "players", []) or [])
@@ -399,7 +404,8 @@ def extract_summary_metrics(replay: Any) -> dict[str, Any]:
         for event in tracker_events:
             event_type = type(event).__name__
             if event_type == "UpgradeCompleteEvent" and getattr(event, "player", None) == player:
-                name = getattr(event, "upgrade_type_name", "")
+                raw_name = getattr(event, "upgrade_type_name", "")
+                name = _canonical_term(raw_name)
                 if name in IMPORTANT_UPGRADES and name not in seen_upgrades:
                     upgrades.append(f"{_format_time(_to_real_seconds(getattr(event, 'second', 0), speed_factor))} {_localize_term(name)}")
                     seen_upgrades.add(name)
@@ -749,9 +755,15 @@ def _extract_combat_swings(tracker_events: list[Any], players: list[Any], speed_
 
 def _localize_event_text(event_text: str) -> str:
     localized = str(event_text)
-    for raw, kr in TERM_KR.items():
+    for raw, kr in sorted(TERM_KR.items(), key=lambda item: len(item[0]), reverse=True):
         localized = localized.replace(raw, kr)
+        localized = localized.replace(raw.lower(), kr)
     return localized
+
+
+def _canonical_term(name: str) -> str:
+    raw = str(name or "")
+    return CANONICAL_TERM_BY_LOWER.get(raw.lower(), raw)
 
 
 def _format_time(seconds: int) -> str:
@@ -775,7 +787,8 @@ def _speed_factor(speed: str | None) -> float:
 
 
 def _localize_term(name: str) -> str:
-    return TERM_KR.get(name, name)
+    canonical = _canonical_term(name)
+    return TERM_KR.get(canonical, canonical)
 
 
 def _localize_matchup(matchup: str) -> str:

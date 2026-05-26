@@ -176,3 +176,31 @@ def test_extract_summary_metrics_includes_cross_race_signature_tech_and_units() 
     assert any("땅굴벌레" in item for item in metrics["signature_transitions"]["Alpha"])
     assert any(name == "뮤탈리스크" for name, _ in metrics["signature_units"]["Bravo"])
     assert any(name == "땅굴벌레" for name, _ in metrics["signature_units"]["Alpha"])
+
+
+def test_extract_summary_metrics_matches_lowercase_upgrade_names_from_real_zerg_replays() -> None:
+    alpha = FakePlayer(
+        name="Alpha",
+        race="Zerg",
+        pid=1,
+        units=[SimpleNamespace(name="Zergling")],
+    )
+    bravo = FakePlayer(
+        name="Bravo",
+        race="Terran",
+        pid=2,
+        units=[SimpleNamespace(name="Marine")],
+    )
+    replay = SimpleNamespace(
+        players=[alpha, bravo],
+        speed="Normal",
+        tracker_events=[
+            _stats_event(pid=1, second=120, workers=32, killed=0, lost=0, food_used=40, food_made=46),
+            _stats_event(pid=2, second=120, workers=30, killed=0, lost=0, food_used=38, food_made=46),
+            _upgrade_event(alpha, second=294, name="zerglingmovementspeed"),
+        ],
+    )
+
+    metrics = extract_summary_metrics(replay)
+
+    assert metrics["upgrades"]["Alpha"] == ["4:54 저글링 발업"]
