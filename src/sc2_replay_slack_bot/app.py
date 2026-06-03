@@ -152,6 +152,11 @@ def main() -> None:
 
 
 def _skip_reason(replay_facts: dict) -> str | None:
+    is_ladder = replay_facts.get("replay_metadata", {}).get("is_ladder")
+    category = str(replay_facts.get("category") or "Unknown")
+    if not is_ladder:
+        return f"replay was not a ladder game (category={category})"
+
     if replay_facts.get("game_length_seconds", 0) < MIN_REVIEW_GAME_LENGTH_SECONDS:
         return f"game length was {replay_facts.get('game_length_seconds', 0)} seconds"
 
