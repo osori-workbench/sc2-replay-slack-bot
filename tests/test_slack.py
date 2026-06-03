@@ -17,6 +17,7 @@ def test_build_slack_text_contains_block_style_sections() -> None:
                 "Bravo": ["5:00 자극제", "6:40 전투방패"],
             }
         },
+        "replay_metadata": {"is_ladder": True},
     }
     analysis = "- 경기 요약\n- 운영 우위\n\n- 승패 핵심 이유\n- 정찰 우위\n\n- 핵심 피드백 3개\n- 조합 전환"
 
@@ -25,10 +26,31 @@ def test_build_slack_text_contains_block_style_sections() -> None:
     assert "🎮" in text
     assert "sample.SC2Replay" in text
     assert "저그 vs 테란" in text
+    assert "게임 종류: *래더*" in text
     assert "핵심 타이밍" in text
     assert "*경기 요약*" in text
     assert "*승패 핵심 이유*" in text
     assert "━━━━━━━━" in text
+
+
+def test_build_slack_text_shows_game_type_from_replay_metadata() -> None:
+    facts = {
+        "map_name": "White Rabbit LE",
+        "matchup": "PvT",
+        "winner": "Alpha",
+        "game_length": "10:00",
+        "players": [
+            {"name": "Alpha", "race": "Protoss"},
+            {"name": "Bravo", "race": "Terran"},
+        ],
+        "summary_metrics": {},
+        "replay_metadata": {"is_ladder": True},
+    }
+
+    text = build_slack_text(facts, "경기 요약\n...", replay_name="sample.SC2Replay")
+
+    assert "게임 종류: *래더*" in text
+
 
 
 def test_build_slack_text_prefers_signature_transitions_for_key_timings() -> None:

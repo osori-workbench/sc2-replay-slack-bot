@@ -31,6 +31,7 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str, focus_
     winner = replay_facts.get("winner", "Unknown")
     game_length = replay_facts.get("game_length", "Unknown")
     played_at = _format_played_at_kst(replay_facts.get("played_at"))
+    game_type = _display_game_type(replay_facts)
     timings = _summarize_timings(replay_facts)
     formatted_analysis = _format_analysis_for_slack(analysis)
 
@@ -48,6 +49,7 @@ def build_slack_text(replay_facts: dict, analysis: str, replay_name: str, focus_
         f"• 파일: `{replay_name}`",
         f"• 맵: *{map_name}*",
         f"• 매치업: *{matchup}*",
+        f"• 게임 종류: *{game_type}*",
         f"• 승자: *{winner}*",
         f"• 경기 시간: *{game_length}*",
     ])
@@ -88,6 +90,23 @@ def _display_matchup(replay_facts: dict) -> str:
         right = RACE_KR.get(players[1].get("race"), players[1].get("race", "미상"))
         return f"{left} vs {right}"
     return str(matchup or "Unknown")
+
+
+def _display_game_type(replay_facts: dict) -> str:
+    metadata = replay_facts.get("replay_metadata", {}) or {}
+    if metadata.get("is_ladder") is True:
+        return "래더"
+
+    category = str(replay_facts.get("category") or metadata.get("category") or "일반")
+    lowered = category.lower()
+    if lowered == "ladder":
+        return "래더"
+    if lowered == "private":
+        return "친선전"
+    if lowered == "custom":
+        return "커스텀"
+    return category
+
 
 
 def _summarize_timings(replay_facts: dict) -> list[str]:
