@@ -100,3 +100,22 @@ def test_build_slack_text_shows_played_at_in_korean_time() -> None:
     text = build_slack_text(facts, "경기 요약\n...", replay_name="sample.SC2Replay")
 
     assert "경기 시각(KST): *2026-05-22 14:18:10*" in text
+
+
+def test_build_slack_text_treats_naive_played_at_as_utc_before_kst_conversion() -> None:
+    facts = {
+        "map_name": "Site Delta",
+        "matchup": "TvP",
+        "winner": "Bravo",
+        "game_length": "11:02",
+        "played_at": "2026-05-22 05:18:10",
+        "players": [
+            {"name": "Bravo", "race": "Terran"},
+            {"name": "Alpha", "race": "Protoss"},
+        ],
+        "summary_metrics": {},
+    }
+
+    text = build_slack_text(facts, "경기 요약\n...", replay_name="sample.SC2Replay")
+
+    assert "경기 시각(KST): *2026-05-22 14:18:10*" in text

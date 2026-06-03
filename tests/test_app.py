@@ -463,3 +463,76 @@ def test_run_once_skips_replays_with_cheater_or_ai_player_names(tmp_path: Path, 
     assert results == []
     state_text = config.state_path.read_text(encoding="utf-8")
     assert replay_path.resolve().as_posix() in state_text
+
+
+def test_run_once_posts_replays_in_oldest_played_at_order(tmp_path: Path, monkeypatch) -> None:
+    replay_dir = tmp_path / "replays"
+    replay_dir.mkdir()
+    newer = replay_dir / "02-newer.SC2Replay"
+    older = replay_dir / "01-older.SC2Replay"
+    newer.write_bytes(b"newer")
+    older.write_bytes(b"older")
+
+    guides_dir = tmp_path / "guides"
+    guides_dir.mkdir()
+
+    config = AppConfig(
+        replay_dir=replay_dir,
+        state_path=tmp_path / "state.json",
+        guides_dir=guides_dir,
+        slack_webhook_url="https://example.invalid/webhook",
+        analyzer_mode="manual",
+        min_replay_mtime=None,
+        llm_api_key="",
+        llm_api_base_url="https://api.openai.com/v1",
+        llm_model="gpt-4.1-mini",
+    )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.load_config", lambda: config)
+
+    def fake_load_replay(path: str, **_kwargs):
+        if path.endswith("02-newer.SC2Replay"):
+            played_at = "2026-05-22T06:18:10+00:00"
+            winner = "Bravo"
+        else:
+            played_at = "2026-05-22T05:18:10+00:00"
+            winner = "Alpha"
+
+        return SimpleNamespace(
+            map_name="Post-Youth",
+            game_length=SimpleNamespace(seconds=600),
+            date=played_at,
+            real_type="1v1",
+            category="Ladder",
+            expansion="LotV",
+            teams=[
+                FakeTeam(1, "Win" if winner == "Alpha" else "Loss", [FakePlayer("Alpha", "Protoss", "Protoss", 200)]),
+                FakeTeam(2, "Win" if winner == "Bravo" else "Loss", [FakePlayer("Bravo", "Terran", "Terran", 180)]),
+            ],
+            players=[
+                FakePlayer("Alpha", "Protoss", "Protoss", 200),
+                FakePlayer("Bravo", "Terran", "Terran", 180),
+            ],
+            tracker_events=[],
+        )
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.sc2reader.load_replay", fake_load_replay)
+    monkeypatch.setattr(
+        "sc2_replay_slack_bot.app.build_manual_analysis",
+        lambda *_args, **_kwargs: "경기 요약\n- manual\n승패 핵심 이유\n- manual\n핵심 피드백 3개\n- manual",
+    )
+
+    posted: list[str] = []
+
+    def fake_post_to_slack(_webhook_url: str, text: str):
+        posted.append(text)
+        return None
+
+    monkeypatch.setattr("sc2_replay_slack_bot.app.post_to_slack", fake_post_to_slack)
+
+    results = run_once(dry_run=False, max_files=5)
+
+    assert [item["replay"] for item in results] == ["01-older.SC2Replay", "02-newer.SC2Replay"]
+    assert len(posted) == 2
+    assert "01-older.SC2Replay" in posted[0]
+    assert "02-newer.SC2Replay" in posted[1]

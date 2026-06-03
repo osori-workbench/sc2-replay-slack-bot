@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 import requests
@@ -146,6 +146,6 @@ def _format_played_at_kst(played_at: object) -> str:
         return text
 
     if parsed.tzinfo is None:
-        return parsed.strftime("%Y-%m-%d %H:%M:%S")
+        parsed = parsed.replace(tzinfo=timezone.utc)
 
     return parsed.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y-%m-%d %H:%M:%S")

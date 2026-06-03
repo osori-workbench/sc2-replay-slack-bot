@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+from datetime import datetime, timezone
 
 import sc2reader
 
@@ -33,10 +34,9 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
         model=config.llm_model,
     )
 
+    pending_reviews: list[dict] = []
     processed: list[dict] = []
     for replay_path in find_replay_files(config.replay_dir, min_mtime=config.min_replay_mtime):
-        if len(processed) >= max_files:
-            break
         try:
             status = store.classify(replay_path)
         except OSError as exc:
@@ -46,7 +46,6 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
             continue
 
         try:
-            logger.info("Processing replay: %s (%s)", replay_path.name, status.reason)
             replay = sc2reader.load_replay(str(replay_path), load_level=4)
             facts = replay_to_facts(replay)
             facts["replay_path"] = str(replay_path)
@@ -59,6 +58,29 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
                 store.mark_processed(replay_path, status.sha256)
                 continue
 
+            pending_reviews.append(
+                {
+                    "replay_path": replay_path,
+                    "status": status,
+                    "facts": facts,
+                }
+            )
+        except OSError as exc:
+            logger.warning("Skipping unreadable replay %s: %s", replay_path, exc)
+            continue
+        except Exception:
+            logger.exception("Replay preprocessing failed: %s", replay_path)
+            continue
+
+    pending_reviews.sort(key=lambda item: _replay_sort_key(item["facts"], item["replay_path"]))
+
+    for item in pending_reviews[:max_files]:
+        replay_path = item["replay_path"]
+        status = item["status"]
+        facts = item["facts"]
+
+        try:
+            logger.info("Processing replay: %s (%s)", replay_path.name, status.reason)
             focus_player = detect_focus_player(replay_path, facts)
             guide_context = load_guide_context(config.guides_dir, replay_facts=facts)
             guide_file_paths = select_guide_files(config.guides_dir, replay_facts=facts)
@@ -139,6 +161,38 @@ def _skip_reason(replay_facts: dict) -> str | None:
             if keyword in name:
                 return f"player name matched filtered keyword '{keyword}': {name}"
     return None
+
+
+def _replay_sort_key(replay_facts: dict, replay_path) -> tuple[float, str, str]:
+    played_at = _parse_played_at(replay_facts.get("played_at"))
+    if played_at is not None:
+        return (played_at.timestamp(), replay_path.name, str(replay_path.parent))
+
+    try:
+        modified_at = replay_path.stat().st_mtime
+    except OSError:
+        modified_at = float("inf")
+    return (modified_at, replay_path.name, str(replay_path.parent))
+
+
+def _parse_played_at(played_at: object) -> datetime | None:
+    if not played_at:
+        return None
+
+    text = str(played_at).strip()
+    if not text or text == "Unknown":
+        return None
+
+    normalized = text.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
 
 
 if __name__ == "__main__":
