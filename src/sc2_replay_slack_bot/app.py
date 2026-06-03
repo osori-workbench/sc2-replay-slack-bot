@@ -46,6 +46,7 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
             continue
 
         try:
+            logger.info("Processing replay: %s (%s)", replay_path.name, status.reason)
             replay = sc2reader.load_replay(str(replay_path), load_level=4)
             facts = replay_to_facts(replay)
             facts["replay_path"] = str(replay_path)
@@ -54,7 +55,7 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
 
             skip_reason = _skip_reason(facts)
             if skip_reason:
-                logger.info("Skipping replay review for %s: %s", replay_path, skip_reason)
+                logger.info("Skipping replay review for %s: %s", replay_path.name, skip_reason)
                 store.mark_processed(replay_path, status.sha256)
                 continue
 
@@ -79,9 +80,16 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
             if not dry_run:
                 if not config.slack_webhook_url:
                     raise ValueError("SLACK_WEBHOOK_URL is required unless --dry-run is used")
+                logger.info("Posting replay analysis to Slack for %s", replay_path.name)
                 post_to_slack(config.slack_webhook_url, slack_text)
 
             store.mark_processed(replay_path, status.sha256)
+            logger.info(
+                "Finished replay: %s winner=%s focus=%s",
+                replay_path.name,
+                facts.get("winner") or "unknown",
+                (focus_player or {}).get("name", "general") if isinstance(focus_player, dict) else (focus_player or "general"),
+            )
             processed.append(
                 {
                     "replay": replay_path.name,
@@ -94,17 +102,30 @@ def run_once(dry_run: bool = False, max_files: int = 10) -> list[dict]:
         except OSError as exc:
             logger.warning("Skipping unreadable replay %s: %s", replay_path, exc)
             continue
+        except Exception:
+            logger.exception("Replay processing failed: %s", replay_path)
+            continue
     return processed
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description="Analyze new SC2 replay files and post summaries to Slack.")
     parser.add_argument("--dry-run", action="store_true", help="Analyze replays but do not send to Slack")
     parser.add_argument("--max-files", type=int, default=10, help="Maximum number of replay files to process")
     args = parser.parse_args()
 
     results = run_once(dry_run=args.dry_run, max_files=args.max_files)
-    print(json.dumps(results, ensure_ascii=False, indent=2))
+    if results:
+        summary = [
+            {
+                "replay": item.get("replay"),
+                "status": item.get("status"),
+                "winner": (item.get("facts") or {}).get("winner"),
+            }
+            for item in results
+        ]
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
 
 
 
